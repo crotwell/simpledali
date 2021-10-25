@@ -4,6 +4,10 @@ Datalink in pure python.
 Protocol is defined at
 https://iris-edu.github.io/libdali/datalink-protocol.html
 
+# Example
+
+Example of sending and receiving Datalink packets in the example directory.
+
 # build/release
 ```
 conda create -n simpledali python=3.9
