@@ -2,6 +2,8 @@
 from datetime import datetime, timedelta, timezone
 import jwt # pip3 install pyjwt (not jwt!!!)
 
+MICROS = 1000000
+
 
 def datetimeToHPTime(time):
     hptime = int(time.timestamp() * MICROS)

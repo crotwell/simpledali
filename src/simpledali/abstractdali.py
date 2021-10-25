@@ -4,10 +4,9 @@ import json
 from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
 from .dalipacket import DaliPacket, DaliResponse
+from .util import datetimeToHPTime
 
-# https://raw.githubusercontent.com/iris-edu/libdali/master/doc/DataLink.protocol
-
-MICROS = 1000000
+# https://iris-edu.github.io/libdali/datalink-protocol.html
 
 NO_SOUP = "Write permission not granted, no soup for you!"
 
@@ -53,15 +52,17 @@ class DataLink(ABC):
 
     async def writeMSeed(self, msr):
         streamid = "{}/MSEED".format(msr.codes(sep='_'))
-        hpdatastart = int(msr.starttime().timestamp() * MICROS)
-        hpdataend = int(msr.endtime().timestamp() * MICROS)
-        if self.verbose: print("simpleDali.writeMSeed {} {} {}".format(streamid, hpdatastart, hpdataend))
+        hpdatastart = datetimeToHPTime(msr.starttime())
+        hpdataend = datetimeToHPTime(msr.endtime())
+        if self.verbose:
+            print("simpleDali.writeMSeed {} {} {}".format(streamid, hpdatastart, hpdataend))
         r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack())
         return r
 
 
     async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
-        if self.verbose: print("simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend))
+        if self.verbose:
+            print("simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend))
         jsonAsByteArray = json.dumps(jsonMessage).encode('UTF-8')
         r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray)
         return r
@@ -99,6 +100,14 @@ class DataLink(ABC):
     async def info(self, type):
         header = "INFO {}".format(type)
         r = await self.writeCommand(header, None)
+        return r
+
+    async def positionEarliest(self):
+        r = await self.writeCommand("POSITION SET EARLIEST", None)
+        return r
+
+    async def positionLatest(self):
+        r = await self.writeCommand("POSITION SET LATEST", None)
         return r
 
     async def positionAfter(self, time):
