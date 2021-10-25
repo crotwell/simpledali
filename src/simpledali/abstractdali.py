@@ -131,6 +131,25 @@ class DataLink(ABC):
         r = await self.writeCommand("READ {}".format(packetId), None)
         return r
 
+    async def readEarliest(self):
+        # maybe one day can
+        # return await self.read("EARLIEST")
+        r = await self.positionEarliest()
+        if r.type == 'OK':
+            return await self.read(r.value)
+        else:
+            print(f"position did not return OK: {r}")
+            return r
+
+    async def readLatest(self):
+        # maybe one day can
+        # return await self.read("LATEST")
+        r = await self.positionLatest()
+        if r.type == 'OK':
+            return await self.read(r.value)
+        else:
+            return r
+
     async def stream(self):
         header = "STREAM"
         await self.send(header, None)

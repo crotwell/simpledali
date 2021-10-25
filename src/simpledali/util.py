@@ -16,6 +16,9 @@ def hptimeToDatetime(hptime):
 def utcnowWithTz():
     return datetime.now(timezone.utc)
 
+def hptimeAsIso(hptime):
+    return hptimeToDatetime(hptime).isoformat()
+
 def encodeAuthToken(user_id, expireDelta, writePattern, secretKey):
     """
     Generates a ringserver Auth Token
