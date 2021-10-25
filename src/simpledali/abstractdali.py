@@ -178,3 +178,27 @@ class DataLink(ABC):
         for k,v in xmlTree.find('Status').attrib.items():
             out['Status'][k] = v
         return out
+
+    def parseInfoStreams(self, streamsResponse):
+        """ realy simple parsing of info xml, but not using an xml parser"""
+        if streamsResponse.type != 'INFO' or streamsResponse.value != 'STREAMS':
+            raise Exception("Does not look like INFO STREAMS DaliResponse: {} {}".format(infoResponse.type, infoResponse.value))
+        xmlTree = defusedxml.ElementTree.fromstring(streamsResponse.message)
+        out = {}
+        for c in xmlTree:
+            out[c.tag] = {}
+            for k,v in c.attrib.items():
+                out[c.tag][k] = v
+            if c.tag == "StreamList":
+                out['StreamList']['Streams'] = []
+                for subc in c:
+                    streamDict = {}
+                    out['StreamList']['Streams'].append(streamDict)
+                    for k,v in subc.attrib.items():
+                        streamDict[k] = v
+            else:
+                for subc in c:
+                    out[c.tag][subc.tag] = {}
+                    for k,v in subc.attrib.items():
+                        out[c.tag][subc.tag][k] = v
+        return out

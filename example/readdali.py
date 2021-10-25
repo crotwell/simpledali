@@ -1,5 +1,6 @@
 import simpledali
 import asyncio
+import json
 import logging
 from datetime import datetime, timedelta
 from array import array
@@ -23,9 +24,9 @@ async def init_dali(host, port, verbose=False,
     serverId = await dali.id(programname, username, processid, architecture)
     print(f"Resp: {serverId}")
     serverInfo = await dali.info("STATUS")
-    print(f"Info Status: {serverInfo.message} ")
+    print(f"Info Status: {json.dumps(dali.parseInfoStatus(serverInfo), indent=4, sort_keys=True)} ")
     serverInfo = await dali.info("STREAMS")
-    print(f"Info Streams: {serverInfo.message} ")
+    print(f"Info Streams: {json.dumps(dali.parseInfoStreams(serverInfo), indent=4, sort_keys=True)} ")
     return dali
 
 async def stream_data(dali):
