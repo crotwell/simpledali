@@ -213,6 +213,9 @@ class MiniseedRecord:
         else:
             raise Exception("Encoding type {} not supported.".format(self.header.encoding))
 
+    def __str__(self):
+        return f"{self.codes()} {self.starttime()} {self.endtime()}"
+
 def unpackMiniseedHeader(recordBytes, endianChar='>'):
     if len(recordBytes) < 48:
         raise Exception("Not enough bytes for header: {:d}".format(len(recordBytes)))
