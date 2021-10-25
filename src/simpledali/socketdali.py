@@ -12,6 +12,7 @@ class SocketDataLink(DataLink):
 
     async def createDaliConnection(self):
         await self.close()
+        if self.verbose: print(f"connect {self.host}:{self.port}")
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
     async def send(self, header, data):
@@ -79,6 +80,8 @@ class SocketDataLink(DataLink):
                 m = await self.reader.readexactly(dSize)
                 message = m.decode("utf-8")
                 return DaliResponse(type, value, message)
+            elif header == "ENDSTREAM":
+                return DaliResponse(header, value, message)
             else:
                 raise Exception("Header does not start with INFO, ID, PACKET, OK or ERROR: {}".format(header))
             return DaliResponse(type, value, message)

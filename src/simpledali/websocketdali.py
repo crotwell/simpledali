@@ -12,6 +12,7 @@ class WebSocketDataLink(DataLink):
 
     async def createDaliConnection(self):
         await self.close()
+        if self.verbose: print(f"connect {self.uri}")
         self.ws = await websockets.connect(self.uri)
         if self.verbose:
             print("Websocket connect to {}".format(self.uri))
@@ -86,6 +87,8 @@ class WebSocketDataLink(DataLink):
                 m = response[hSize+3:]
                 message = m.decode("utf-8")
                 return DaliResponse(type, value, message)
+            elif header == "ENDSTREAM":
+                return DaliResponse(header, value, message)
             else:
                 raise Exception("Header does not start with INFO, ID, PACKET, OK or ERROR: {}".format(header))
             return DaliResponse(type, value, message)
