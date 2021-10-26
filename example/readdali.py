@@ -7,27 +7,14 @@ from array import array
 import jwt
 from threading import Thread
 import sys
+import xml.dom.minidom
+
 
 logging.basicConfig(level=logging.DEBUG)
 
 host = "localhost"
 port = 18000
 uri = f"ws://{host}:{port}/datalink"
-
-async def init_dali(host, port, verbose=False,
-        programname="simpleDali",
-        username="dragrace",
-        processid=0,
-        architecture="python"):
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    #dali = simpledali.WebSocketDataLink(uri, verbose=True)
-    serverId = await dali.id(programname, username, processid, architecture)
-    print(f"Resp: {serverId}")
-    serverInfo = await dali.info("STATUS")
-    print(f"Info Status: {json.dumps(dali.parseInfoStatus(serverInfo), indent=4, sort_keys=True)} ")
-    serverInfo = await dali.info("STREAMS")
-    print(f"Info Streams: {json.dumps(dali.parseInfoStreams(serverInfo), indent=4, sort_keys=True)} ")
-    return dali
 
 async def stream_data(dali):
     await dali.stream()
@@ -45,13 +32,55 @@ async def stream_data(dali):
         print(f"Dali task cancelled")
         return
 
-async def main():
-    dali = await init_dali(host, port, verbose=False, programname="readdali")
+async def main(host, port, verbose=False):
+    # these all have defaults
+    programname="simpleDali",
+    username="dragrace",
+    processid=0,
+    architecture="python"
+    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
+    # or can use websockets if the server implements
+    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
+    # this is not required, connection will be created on first use
     await dali.createDaliConnection()
+    # very good idea to call id at start, both for logging on server
+    # side and to get capabilities like packet size or write ability
+    serverId = await dali.id(programname, username, processid, architecture)
+    print(f"Id: {serverId}")
+    # can get status, stream, connections parsed into a dict
+    infoStatus = await dali.parsedInfoStatus()
+    print(f"Info Status: {json.dumps(infoStatus, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} ")
+    infoStreams = await dali.parsedInfoStreams()
+    print(f"Info Streams: {json.dumps(infoStreams, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} ")
+    # or can get status, streams and connections as xml
+    status_xml = await dali.info("STATUS")
+    parsed_xml = xml.dom.minidom.parseString(status_xml.message)
+    print()
+    print(parsed_xml.toprettyxml())
+    print()
+    streams_xml = await dali.info("STREAMS")
+    parsed_xml = xml.dom.minidom.parseString(streams_xml.message)
+    print()
+    print(parsed_xml.toprettyxml())
+    print()
+    streams_xml = await dali.info("CONNECTIONS")
+    parsed_xml = xml.dom.minidom.parseString(streams_xml.message)
+    print()
+    print(parsed_xml.toprettyxml())
+    print()
+
+    # try to read earliest packet, note this might fail on a high volume
+    # server as it requires two transactions and the packet might fall
+    # out of the ring before it can be requested
     daliPacket = await dali.readEarliest()
     print(f"First Dali packet: {daliPacket}")
     daliPacket = await dali.readLatest()
     print(f"Last Dali packet: {daliPacket}")
+    
+    # set regex match pattern, really important on high volume server
+    # to avoid getting way to much data
+    await dali.match("XX_.*")
+    # stream data
     await stream_data(dali)
     print(f"Closing datalink")
     await dali.close()
@@ -59,7 +88,7 @@ async def main():
 
 try:
     debug = False
-    asyncio.run(main(), debug=debug)
+    asyncio.run(main(host, port, verbose=True), debug=debug)
 except KeyboardInterrupt:
     # cntrl-c
     print("Goodbye...")

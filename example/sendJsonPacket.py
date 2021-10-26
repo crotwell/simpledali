@@ -12,18 +12,6 @@ host = "localhost"
 port = 18000
 uri = f"ws://{host}:{port}/datalink"
 
-async def init_dali(host, port,
-        verbose=False,
-        programname="simpleDali",
-        username="dragrace",
-        processid=0,
-        architecture="python"):
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    #dali = simpledali.WebSocketDataLink(uri, verbose=verbose)
-    serverId = await dali.id(programname, username, processid, architecture)
-    print(f"Resp: {serverId}")
-    return dali
-
 async def send_test_json(dali):
     network = "XX"
     station = "TEST"
@@ -43,7 +31,15 @@ async def send_test_json(dali):
 
 
 async def main():
-    dali = await init_dali(host, port)
+    verbose=False
+    programname="simpleDali"
+    username="dragrace"
+    processid=0
+    architecture="python"
+    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
+    #dali = simpledali.WebSocketDataLink(uri, verbose=verbose)
+    serverId = await dali.id(programname, username, processid, architecture)
+    print(f"Resp: {serverId}")
     for i in range(1):
         await send_test_json(dali)
         await asyncio.sleep(1)

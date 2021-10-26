@@ -44,7 +44,15 @@ async def send_test_mseed(dali):
 
 
 async def main():
-    dali = await init_dali(host, port)
+    verbose=False
+    programname="simpleDali"
+    username="dragrace"
+    processid=0
+    architecture="python"
+    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
+    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
+    serverId = await dali.id(programname, username, processid, architecture)
+    print(f"Resp: {serverId}")
     for i in range(1):
         await send_test_mseed(dali)
         await asyncio.sleep(1)
