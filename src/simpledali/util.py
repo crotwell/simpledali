@@ -19,6 +19,24 @@ def utcnowWithTz():
 def hptimeAsIso(hptime):
     return hptimeToDatetime(hptime).isoformat()
 
+def optional_date(date_str):
+    if len(date_str)<10:
+        # some date items are just `-`,
+        return None
+    else:
+        # this is probably dangerous...
+        try:
+            d = date_str
+            if (len(date_str) == 19 or len(date_str) == 26 ) and date_str[10] == ' ':
+                d = f"{date_str[0:10]}T{date_str[11:]}"
+            if d[-1] == 'Z':
+                # python datetime doesn't like Z
+                d = d[:-1]+"+00:00"
+            return datetime.fromisoformat(d).replace(tzinfo=timezone.utc)
+        except:
+            print(f"Can't parse date: {date_str}")
+            return date_str
+
 def encodeAuthToken(user_id, expireDelta, writePattern, secretKey):
     """
     Generates a ringserver Auth Token

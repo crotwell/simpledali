@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
 from .dalipacket import DaliPacket, DaliResponse
-from .util import datetimeToHPTime
+from .util import datetimeToHPTime, optional_date
 
 # https://iris-edu.github.io/libdali/datalink-protocol.html
 
@@ -12,9 +12,52 @@ NO_SOUP = "Write permission not granted, no soup for you!"
 
 class DataLink(ABC):
 
-    def __init__(self, verbose=False):
+    def __init__(self, packet_size=-1, verbose=False):
+        """init DataLink. Packet_size can be set, or can be acquired from the
+        server by calling either parsedInfoStatus() or info("STATUS")
+        """
+        self.packet_size = packet_size
         self.verbose = verbose
         self.token = None
+        self.int_types = [
+          "RingSize",
+          "PacketSize",
+          "MaximumPacketID",
+          "MaximumPackets",
+          "TotalConnections",
+          "SelectedConnections",
+          "TotalStreams",
+          "EarliestPacketID",
+          "LatestPacketID",
+          "Port",
+          "StreamCount",
+          "RXByteCount",
+          "TotalStreams",
+          "SelectedStreams",
+          "TotalServerThreads",
+        ]
+        self.float_types = [
+          "TXPacketRate",
+          "TXByteRate",
+          "RXPacketRate",
+          "RXByteRate",
+          "DataLatency",
+          "Latency",
+
+        ]
+        self.date_types = [
+          "StartTime",
+          "EarliestPacketCreationTime",
+          "EarliestPacketDataStartTime",
+          "EarliestPacketDataEndTime",
+          "LatestPacketCreationTime",
+          "LatestPacketDataStartTime",
+          "LatestPacketDataEndTime",
+          "ConnectionTime",
+          "PacketCreationTime",
+          "PacketDataStartTime",
+          "PacketDataEndTime",
+        ]
 
 
     @abstractmethod
@@ -38,6 +81,8 @@ class DataLink(ABC):
         pass
 
     async def write(self, streamid, hpdatastart, hpdataend, flags, data):
+        if self.packet_size > 0 and len(data) > self.packet_size:
+             raise Exception(f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}")
         header = "WRITE {} {:d} {:d} {} {:d}".format(streamid, hpdatastart, hpdataend, flags, len(data))
         r = await self.send(header, data)
         return r
@@ -95,6 +140,9 @@ class DataLink(ABC):
     async def id(self, programname, username, processid, architecture):
         header = "ID {}:{}:{}:{}".format(programname, username, processid, architecture)
         r = await self.writeCommand(header, None)
+        if "::" in r.message:
+            # sets packet_size
+            self.parse_capabilities(r.message.split("::")[1].strip())
         return r
 
     async def info(self, type):
@@ -166,21 +214,42 @@ class DataLink(ABC):
         if self.token:
             await self.auth(self.token)
 
-    def parseInfoStatus(self, infoResponse):
-        """ realy simple parsing of info xml, but not using an xml parser"""
+    async def parsedInfoStatus(self):
+        """ realy simple parsing of info status xml into dict"""
+        infoResponse = await self.info("STATUS")
         if infoResponse.type != 'INFO' or infoResponse.value != 'STATUS':
             raise Exception("Does not look like INFO STATUS DaliResponse: {} {}".format(infoResponse.type, infoResponse.value))
         xmlTree = defusedxml.ElementTree.fromstring(infoResponse.message)
         out = {}
         for k,v in xmlTree.attrib.items():
-            out[k] = v
-        out['Status'] = {}
-        for k,v in xmlTree.find('Status').attrib.items():
-            out['Status'][k] = v
+            out[k] = self.info_typed(k, v)
+        statusEl = xmlTree.find("Status")
+        if statusEl is not None:
+            out['Status'] = self.status_xml_to_dict(statusEl)
         return out
 
-    def parseInfoStreams(self, streamsResponse):
-        """ realy simple parsing of info xml, but not using an xml parser"""
+    def parse_capabilities(self, cap):
+        items = cap.split()
+        out = {}
+        for i in items:
+            if ':' in i:
+                spliti = i.split(':')
+                out[spliti[0]] = spliti[1]
+                if spliti[0] == "PACKETSIZE":
+                    self.packet_size = int(spliti[1])
+        return out
+
+    def status_xml_to_dict(self, statusEl):
+        out = {}
+        for k,v in statusEl.attrib.items():
+            out[k] = self.info_typed(k, v)
+        if 'PacketSize' in out:
+            self.packet_size = out['PacketSize']
+        return out
+
+    async def parsedInfoStreams(self):
+        """ realy simple parsing of info streams xml into dict"""
+        streamsResponse = await self.info("STREAMS")
         if streamsResponse.type != 'INFO' or streamsResponse.value != 'STREAMS':
             raise Exception("Does not look like INFO STREAMS DaliResponse: {} {}".format(infoResponse.type, infoResponse.value))
         xmlTree = defusedxml.ElementTree.fromstring(streamsResponse.message)
@@ -188,17 +257,40 @@ class DataLink(ABC):
         for c in xmlTree:
             out[c.tag] = {}
             for k,v in c.attrib.items():
-                out[c.tag][k] = v
-            if c.tag == "StreamList":
-                out['StreamList']['Streams'] = []
+                out[c.tag][k] = self.info_typed(k, v)
+            if c.tag =="Status":
+                out['Status'] = self.status_xml_to_dict(c)
+            elif c.tag.endswith("List"):
+                sublist = []
+                out[c.tag][c.tag[:len(c.tag)-4]] = sublist
                 for subc in c:
                     streamDict = {}
-                    out['StreamList']['Streams'].append(streamDict)
+                    sublist.append(streamDict)
                     for k,v in subc.attrib.items():
-                        streamDict[k] = v
+                        streamDict[k] = self.info_typed(k, v)
             else:
-                for subc in c:
-                    out[c.tag][subc.tag] = {}
-                    for k,v in subc.attrib.items():
-                        out[c.tag][subc.tag][k] = v
+                out[c.tag] = {}
+                for k,v in c.attrib.items():
+                    out[c.tag][k] = self.info_typed(k, v)
+
+                else:
+                    for subc in c:
+                        out[c.tag][subc.tag] = {}
+                        for k,v in subc.attrib.items():
+                            out[c.tag][subc.tag][k] = self.info_typed(k, v)
         return out
+
+    def info_typed(self, k, v):
+        try:
+            if k in self.int_types:
+                return int(v)
+            elif k in self.float_types:
+                return float(v)
+            elif k in self.date_types:
+                return optional_date(v)
+            else:
+                return v
+        except:
+            if self.verbose:
+                print(f"info_typed can't parse {k} {v}")
+            return v

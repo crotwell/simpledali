@@ -1,5 +1,6 @@
 from .abstractdali import DataLink
 from .dalipacket import DaliPacket, DaliResponse
+from .jsonencoder import JsonEncoder
 from .util import datetimeToHPTime, hptimeToDatetime, utcnowWithTz, encodeAuthToken
 from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
@@ -10,6 +11,7 @@ __all__ = [ DataLink,
             DaliPacket,
             datetimeToHPTime,
             hptimeToDatetime,
+            JsonEncoder,
             utcnowWithTz,
             encodeAuthToken,
             SocketDataLink,
