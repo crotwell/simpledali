@@ -38,9 +38,9 @@ async def main(host, port, verbose=False):
     username="dragrace",
     processid=0,
     architecture="python"
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
+    # dali = simpledali.SocketDataLink(host, port, verbose=verbose)
     # or can use websockets if the server implements
-    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
+    dali = simpledali.WebSocketDataLink(uri, verbose=verbose)
     # this is not required, connection will be created on first use
     await dali.createDaliConnection()
     # very good idea to call id at start, both for logging on server
@@ -76,7 +76,7 @@ async def main(host, port, verbose=False):
     print(f"First Dali packet: {daliPacket}")
     daliPacket = await dali.readLatest()
     print(f"Last Dali packet: {daliPacket}")
-    
+
     # set regex match pattern, really important on high volume server
     # to avoid getting way to much data
     await dali.match("XX_.*")

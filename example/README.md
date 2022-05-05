@@ -8,7 +8,13 @@ The included `ring.conf` set up datalink on port 18000 for localhost. Start with
 ringserver ring.conf
 ```
 
-`readdali.py` will open a datalink connections do status and streams and
+`getid.py` will query the server id and then quit. For example:
+```
+python example/getid.py
+Resp: type=ID value= message=DataLink 2020.075 :: DLPROTO:1.0 PACKETSIZE:512 WRITE
+```
+
+`readdali.py` will open a datalink connections, do status and streams and
 print a line or two for each packet it receives.
 
 `sendJsonPacket.py` will create a Datalink packet containing JSON and send it.
