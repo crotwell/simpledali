@@ -1,5 +1,7 @@
 # simpledali
 
+https://img.shields.io/pypi/v/simpledali
+
 Datalink in pure python.
 
 Protocol is defined at
