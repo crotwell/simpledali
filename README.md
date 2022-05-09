@@ -35,11 +35,12 @@ async def main():
 asyncio.run(main())
 ```
 
-The jsonlarchive script will archive '/JSON' packets as JSONL. This is a similar function to the MSeedWrite configuration on ringserver, but in a separate process and saves JSON packets instead of miniseed.
+The jsonlarchive script will archive '/JSON' packets as JSON Lines. This is a similar function to the MSeedWrite configuration on ringserver, but in a separate process and saves JSON packets instead of miniseed. See jsonlines.org for the file format, basically one JSON
+value per line.
 
 ```
-jsonlarchive -h
-usage: jsonlarchive [-h] [-v] -m MATCH -w WRITE [-d DALIHOST] [-p DALIPORT]
+dali2jsonl -h
+usage: dali2jsonl [-h] [-v] -m MATCH -w WRITE [-d DALIHOST] [-p DALIPORT]
 
 Archive JSON datalink packets as JSONL.
 

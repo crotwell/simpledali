@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Archive JSON Datalink records as JSONL."""
+"""Archive JSON Datalink records as JSON Lines."""
 import os
 import argparse
 import asyncio
@@ -141,7 +141,7 @@ class JsonlArchive:
 
 
 def do_parseargs():
-    parser = argparse.ArgumentParser(description='Archive JSON datalink packets as JSONL.')
+    parser = argparse.ArgumentParser(description='Archive JSON datalink packets as JSON Lines.')
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
                     action="store_true")
     parser.add_argument("-m", "--match", required=True, help="Match regular expression pattern, ex '.*/JSON'")
