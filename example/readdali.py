@@ -15,6 +15,8 @@ logging.basicConfig(level=logging.DEBUG)
 host = "localhost"
 port = 18000
 uri = f"ws://{host}:{port}/datalink"
+#ping_interval=5
+ping_interval=None # to disable ping-pong until ringserver supports, this is default
 
 async def stream_data(dali):
     await dali.stream()
@@ -40,7 +42,7 @@ async def main(host, port, verbose=False):
     architecture="python"
     # dali = simpledali.SocketDataLink(host, port, verbose=verbose)
     # or can use websockets if the server implements
-    dali = simpledali.WebSocketDataLink(uri, verbose=verbose)
+    dali = simpledali.WebSocketDataLink(uri, verbose=verbose, ping_interval=ping_interval)
     # this is not required, connection will be created on first use
     await dali.createDaliConnection()
     # very good idea to call id at start, both for logging on server

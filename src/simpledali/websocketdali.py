@@ -5,15 +5,16 @@ import websockets
 
 
 class WebSocketDataLink(DataLink):
-    def __init__(self, uri, verbose=False):
+    def __init__(self, uri, verbose=False, ping_interval=None):
         super(WebSocketDataLink, self).__init__(verbose)
         self.uri = uri
         self.ws = None
+        self.ping_interval = ping_interval
 
     async def createDaliConnection(self):
         await self.close()
         if self.verbose: print(f"connect {self.uri}")
-        self.ws = await websockets.connect(self.uri)
+        self.ws = await websockets.connect(self.uri, ping_interval=self.ping_interval)
         if self.verbose:
             print("Websocket connect to {}".format(self.uri))
 

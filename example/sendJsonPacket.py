@@ -17,7 +17,7 @@ async def send_test_json(dali):
     station = "TEST"
     starttime = simpledali.utcnowWithTz()
     print(f"before writeJSON {starttime}")
-    streamid = f"{network}_{station}_SOH/JSON"
+    streamid = f"{network}_{station}_00_SOH/JSON"
     hpdatastart = simpledali.datetimeToHPTime(starttime)
     hpdataend = hpdatastart
     jsonMessage = {
