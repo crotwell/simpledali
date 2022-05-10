@@ -6,6 +6,12 @@ import asyncio
 import pathlib
 import re
 
+# tomllib is std in python > 3.11 so do conditional import
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
+
 from .abstractdali import DataLink
 from .dalipacket import DaliPacket, DaliResponse
 from .jsonencoder import JsonEncoder
@@ -14,7 +20,7 @@ from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
 
 DEFAULT_HOST = 'localhost'
-DEFAULT_PORT = 18000
+DEFAULT_PORT = 15000
 
 JSON_SUFFIX = "/JSON"
 
@@ -81,8 +87,8 @@ class JsonlArchive:
     def saveToJSONL(self, daliPacket):
         start = hptimeToDatetime(daliPacket.dataStartTime)
         codesStr = daliPacket.streamId
-        if daliPacket.streamId.endswith(JSON_SUFFIX):
-            codesStr = daliPacket.streamId[:-5]
+        # remove "type" like /JSON
+        codesStr = codesStr.split('/')[0]
         codes = codesStr.split('_')
         chan = ""
         loc = ""
@@ -139,26 +145,42 @@ class JsonlArchive:
                 raise ValueError(f"directory value {f} not allowed in write pattern {p}")
         return True;
 
+def defaults_conf(conf):
+    if "datalink" not in conf:
+        raise ValueError("[datalink] is required in configuration toml")
+    else:
+        dali_conf = conf["datalink"]
+        if "match" not in dali_conf:
+            raise ValueError("match is required in configuration toml")
+        if "host" not in dali_conf:
+            dali_conf["host"] = "localhost"
+        if "port" not in dali_conf:
+            dali_conf["port"] = 15000
+    if "jsonl" not in conf:
+        raise ValueError("[jsonl] is required in configuration toml")
+        jsonl_conf = conf["jsonl"]
+        if "write" not in jsonl_conf:
+            raise ValueError("write is required in configuration toml")
 
 def do_parseargs():
     parser = argparse.ArgumentParser(description='Archive JSON datalink packets as JSON Lines.')
     parser.add_argument("-v", "--verbose", help="increase output verbosity",
                     action="store_true")
-    parser.add_argument("-m", "--match", required=True, help="Match regular expression pattern, ex '.*/JSON'")
-    parser.add_argument("-w", "--write", required=True, help="JSONL Write pattern, usage similar to MSeedWrite in ringserver")
-    parser.add_argument("-d", "--dalihost",
-                        help="datalink host, defaults to localhost",
-                        default=DEFAULT_HOST)
-    parser.add_argument("-p", "--daliport",
-                        help="datalink port, defaults to 18000",
-                        default=DEFAULT_PORT)
+    parser.add_argument("-c", "--conf", required=True, help="Configuration as TOML", type=argparse.FileType('rb'))
     return parser.parse_args()
 
 
 def main():
     import sys
     args = do_parseargs()
-    c = JsonlArchive(args.match, args.write, host=args.dalihost, port=args.daliport, verbose=args.verbose)
+    conf = tomllib.load(args.conf)
+    args.conf.close()
+    defaults_conf(conf)
+    c = JsonlArchive(conf['datalink']['match'],
+                     conf['jsonl']['write'],
+                     host=conf['datalink']['host'],
+                     port=conf['datalink']['prt'],
+                     verbose=args.verbose)
 
     try:
         debug = False
