@@ -179,7 +179,7 @@ def main():
     c = JsonlArchive(conf['datalink']['match'],
                      conf['jsonl']['write'],
                      host=conf['datalink']['host'],
-                     port=conf['datalink']['prt'],
+                     port=conf['datalink']['port'],
                      verbose=args.verbose)
 
     try:
