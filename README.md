@@ -35,27 +35,35 @@ async def main():
 asyncio.run(main())
 ```
 
-The jsonlarchive script will archive '/JSON' packets as JSON Lines. This is a similar function to the MSeedWrite configuration on ringserver, but in a separate process and saves JSON packets instead of miniseed. See jsonlines.org for the file format, basically one JSON
+The dali2jsonl script will archive '/JSON' packets as JSON Lines. This is a similar function to the MSeedWrite configuration on ringserver, but in a separate process and saves JSON packets instead of miniseed. See jsonlines.org for the file format, basically one JSON
 value per line.
 
 ```
-dali2jsonl -h
-usage: dali2jsonl [-h] [-v] -m MATCH -w WRITE [-d DALIHOST] [-p DALIPORT]
+dali2jsonl --help
+usage: dali2jsonl [-h] [-v] -c CONF
 
-Archive JSON datalink packets as JSONL.
+Archive JSON datalink packets as JSON Lines.
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         increase output verbosity
-  -m MATCH, --match MATCH
-                        Match regular expression pattern, ex '.*/JSON'
-  -w WRITE, --write WRITE
-                        JSONL Write pattern, usage similar to MSeedWrite in
-                        ringserver
-  -d DALIHOST, --dalihost DALIHOST
-                        datalink host, defaults to localhost
-  -p DALIPORT, --daliport DALIPORT
-                        datalink port, defaults to 18000
+  -c CONF, --conf CONF  Configuration as TOML
+```
+
+The TOML configuration looks like:
+```
+[datalink]
+# datalink host, defaults to localhost
+host='localhost'
+# datalink port, defaults to 18000
+port=15004
+# Match regular expression pattern on stream ids, ex '.*/JSON'
+match='.*/JSON'
+
+[jsonl]
+# JSONL Write pattern, usage similar to MSeedWrite in ringserver
+write='/data/scsn/www/jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
+
 ```
 
 # Example

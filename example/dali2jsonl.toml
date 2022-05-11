@@ -2,11 +2,18 @@
 [datalink]
 # datalink host, defaults to localhost
 host='localhost'
-# datalink port, defaults to 18000
-port=15004
+# datalink port, defaults to 15000
+port=15000
 # Match regular expression pattern on stream ids, ex '.*/JSON'
 match='.*/JSON'
 
 [jsonl]
 # JSONL Write pattern, usage similar to MSeedWrite in ringserver
+# %n - network
+# %s - station
+# %l - location
+# %c - channel
+# %Y - year
+# %j - day of year
+# %H - hour
 write='/data/scsn/www/jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
