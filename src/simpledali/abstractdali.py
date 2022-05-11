@@ -125,6 +125,11 @@ class DataLink(ABC):
         return r
 
     async def auth(self, token):
+        """
+        Sends an AUTHORIZATION command. Note this is not part
+        of the official DataLink protocol yet. See util.encodeAuthToken()
+        and util.decodeAuthToken().
+        """
         self.token = token
         if self.verbose: print("simpleDali.auth {} ".format(token))
         if isinstance(token, str):

@@ -4,7 +4,6 @@ import json
 import logging
 from datetime import datetime, timedelta
 from array import array
-import jwt
 from threading import Thread
 import sys
 import xml.dom.minidom
