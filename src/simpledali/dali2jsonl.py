@@ -115,9 +115,9 @@ class JsonlArchive:
             .replace('%l', loc).replace('%c', chan)
     def fillTimePattern(self, base, time):
         return base\
-            .replace('%Y',str(time.year))\
-            .replace('%j',str(time.timetuple().tm_yday))\
-            .replace('%H',str(time.hour))
+            .replace('%Y',str(time.year).zfill(4))\
+            .replace('%j',str(time.timetuple().tm_yday).zfill(3))\
+            .replace('%H',str(time.hour).zfill(2))
     def checkPattern(self, p):
         """
            checks pattern for allowed flags as not all that are supported
