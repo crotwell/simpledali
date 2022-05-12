@@ -2,7 +2,7 @@
 import asyncio
 import simpledali
 host = "localhost"
-port = 18000
+port = 15000
 uri = f"ws://{host}:{port}/datalink"
 verbose = True
 
