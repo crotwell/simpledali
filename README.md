@@ -9,7 +9,7 @@ https://iris-edu.github.io/libdali/datalink-protocol.html
 
 See [ringserver](https://github.com/iris-edu/ringserver) from IRIS
 for the most common datalink server instance. The public instance
-at [rtserve.iris.washington.edu/](http://rtserve.iris.washington.edu/) allows access to near-realtime streaming seismic data.
+at [rtserve.iris.washington.edu/](http://rtserve.iris.washington.edu/) allows access to near-realtime streaming seismic data over web sockets at [ws://rtserve.iris.washington.edu/datalink](ws://rtserve.iris.washington.edu/datalink)
 
 Support for both regular sockets and websockets. For example:
 
