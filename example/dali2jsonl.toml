@@ -16,4 +16,4 @@ match='.*/JSON'
 # %Y - year
 # %j - day of year
 # %H - hour
-write='/data/scsn/www/jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
+write='jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'

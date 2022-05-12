@@ -26,7 +26,7 @@ JSON_SUFFIX = "/JSON"
 
 Allowed_Flags = ["n", "s", "l", "c", "Y", "j", "H"]
 
-class JsonlArchive:
+class Dali2Jsonl:
     """Archive JSON Datalink records as JSONL."""
     def __init__(self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, verbose=False):
         self.checkPattern(writePattern)
@@ -43,11 +43,23 @@ class JsonlArchive:
         self.verbose = verbose
 
         self.programname="simpleDali",
-        self.username="jsonlarchive",
+        self.username="Dali2Jsonl",
         self.processid=0,
         self.architecture="python"
         if self.verbose:
             print(f"Connect to {self.host}:{self.port}, write to {self.writePattern}")
+
+    @classmethod
+    def from_config(cls, conf, verbose=False):
+        """
+        Configured Dali2Jsonl using dict, eg from .toml config file.
+        """
+        cls.configure_defaults(conf)
+        return cls(conf['datalink']['match'],
+                         conf['jsonl']['write'],
+                         host=conf['datalink']['host'],
+                         port=conf['datalink']['port'],
+                         verbose=verbose)
     async def run(self):
         if self.verbose:
             print(f"Running...")
@@ -145,22 +157,31 @@ class JsonlArchive:
                 raise ValueError(f"directory value {f} not allowed in write pattern {p}")
         return True;
 
-def defaults_conf(conf):
-    if "datalink" not in conf:
-        raise ValueError("[datalink] is required in configuration toml")
-    else:
-        dali_conf = conf["datalink"]
-        if "match" not in dali_conf:
-            raise ValueError("match is required in configuration toml")
-        if "host" not in dali_conf:
-            dali_conf["host"] = "localhost"
-        if "port" not in dali_conf:
-            dali_conf["port"] = 15000
-    if "jsonl" not in conf:
-        raise ValueError("[jsonl] is required in configuration toml")
-        jsonl_conf = conf["jsonl"]
-        if "write" not in jsonl_conf:
-            raise ValueError("write is required in configuration toml")
+    @staticmethod
+    def configure_defaults(conf):
+        if "datalink" not in conf:
+            raise ValueError("[datalink] is required in configuration toml")
+        else:
+            dali_conf = conf["datalink"]
+            if "programname" not in dali_conf:
+                dali_conf["programname"] = "dali2jsonl"
+            if "username" not in dali_conf:
+                dali_conf["username"] = "simpleDali"
+            if "processid" not in dali_conf:
+                dali_conf["programname"] = "0"
+            if "architecture" not in dali_conf:
+                dali_conf["architecture"] = "python"
+            if "match" not in dali_conf:
+                raise ValueError("match is required in configuration toml")
+            if "host" not in dali_conf:
+                dali_conf["host"] = "localhost"
+            if "port" not in dali_conf:
+                dali_conf["port"] = 15000
+        if "jsonl" not in conf:
+            raise ValueError("[jsonl] is required in configuration toml")
+            jsonl_conf = conf["jsonl"]
+            if "write" not in jsonl_conf:
+                raise ValueError("write is required in configuration toml")
 
 def do_parseargs():
     parser = argparse.ArgumentParser(description='Archive JSON datalink packets as JSON Lines.')
@@ -175,13 +196,7 @@ def main():
     args = do_parseargs()
     conf = tomllib.load(args.conf)
     args.conf.close()
-    defaults_conf(conf)
-    c = JsonlArchive(conf['datalink']['match'],
-                     conf['jsonl']['write'],
-                     host=conf['datalink']['host'],
-                     port=conf['datalink']['port'],
-                     verbose=args.verbose)
-
+    c = Dali2Jsonl.from_config(conf, verbose=args.verbose)
     try:
         debug = False
         asyncio.run(c.run())

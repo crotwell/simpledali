@@ -9,7 +9,7 @@ from threading import Thread
 logging.basicConfig(level=logging.DEBUG)
 
 host = "localhost"
-port = 18000
+port = 15000
 uri = f"ws://{host}:{port}/datalink"
 
 
