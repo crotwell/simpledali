@@ -20,7 +20,7 @@ from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
 
 DEFAULT_HOST = 'localhost'
-DEFAULT_PORT = 15000
+DEFAULT_PORT = 16000
 
 JSON_SUFFIX = "/JSON"
 
@@ -168,15 +168,15 @@ class Dali2Jsonl:
             if "username" not in dali_conf:
                 dali_conf["username"] = "simpleDali"
             if "processid" not in dali_conf:
-                dali_conf["programname"] = "0"
+                dali_conf["processid"] = 0
             if "architecture" not in dali_conf:
                 dali_conf["architecture"] = "python"
             if "match" not in dali_conf:
                 raise ValueError("match is required in configuration toml")
             if "host" not in dali_conf:
-                dali_conf["host"] = "localhost"
+                dali_conf["host"] = DEFAULT_HOST
             if "port" not in dali_conf:
-                dali_conf["port"] = 15000
+                dali_conf["port"] = DEFAULT_PORT
         if "jsonl" not in conf:
             raise ValueError("[jsonl] is required in configuration toml")
             jsonl_conf = conf["jsonl"]

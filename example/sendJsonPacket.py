@@ -9,7 +9,7 @@ from threading import Thread
 logging.basicConfig(level=logging.DEBUG)
 
 host = "localhost"
-port = 15000
+port = 16000
 uri = f"ws://{host}:{port}/datalink"
 
 async def send_test_json(dali):

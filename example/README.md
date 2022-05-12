@@ -3,7 +3,7 @@
 First start up a ringserver, available from:
 https://github.com/iris-edu/ringserver/releases
 
-The included `ring.conf` set up datalink on port 18000 for localhost. Start with:
+The included `ring.conf` set up datalink on port 16000 for localhost. Start with:
 ```
 ringserver ring.conf
 ```

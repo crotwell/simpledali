@@ -12,7 +12,7 @@ import xml.dom.minidom
 logging.basicConfig(level=logging.DEBUG)
 
 host = "localhost"
-port = 15000
+port = 16000
 uri = f"ws://{host}:{port}/datalink"
 #ping_interval=5
 ping_interval=None # to disable ping-pong until ringserver supports, this is default
