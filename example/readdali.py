@@ -14,8 +14,9 @@ logging.basicConfig(level=logging.DEBUG)
 host = "localhost"
 port = 16000
 uri = f"ws://{host}:{port}/datalink"
-#ping_interval=5
-ping_interval=None # to disable ping-pong until ringserver supports, this is default
+# ping_interval=5
+ping_interval = None  # to disable ping-pong until ringserver supports, this is default
+
 
 async def stream_data(dali):
     await dali.stream()
@@ -33,15 +34,18 @@ async def stream_data(dali):
         print(f"Dali task cancelled")
         return
 
+
 async def main(host, port, verbose=False):
     # these all have defaults
-    programname="simpleDali",
-    username="dragrace",
-    processid=0,
-    architecture="python"
+    programname = "simpleDali"
+    username = "dragrace"
+    processid = 0
+    architecture = "python"
     # dali = simpledali.SocketDataLink(host, port, verbose=verbose)
     # or can use websockets if the server implements
-    dali = simpledali.WebSocketDataLink(uri, verbose=verbose, ping_interval=ping_interval)
+    dali = simpledali.WebSocketDataLink(
+        uri, verbose=verbose, ping_interval=ping_interval
+    )
     # this is not required, connection will be created on first use
     await dali.createDaliConnection()
     # very good idea to call id at start, both for logging on server
@@ -50,9 +54,13 @@ async def main(host, port, verbose=False):
     print(f"Id: {serverId}")
     # can get status, stream, connections parsed into a dict
     infoStatus = await dali.parsedInfoStatus()
-    print(f"Info Status: {json.dumps(infoStatus, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} ")
+    print(
+        f"Info Status: {json.dumps(infoStatus, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} "
+    )
     infoStreams = await dali.parsedInfoStreams()
-    print(f"Info Streams: {json.dumps(infoStreams, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} ")
+    print(
+        f"Info Streams: {json.dumps(infoStreams, indent=4, sort_keys=True, cls=simpledali.JsonEncoder)} "
+    )
     # or can get status, streams and connections as xml
     status_xml = await dali.info("STATUS")
     parsed_xml = xml.dom.minidom.parseString(status_xml.message)

@@ -13,17 +13,21 @@ port = 16000
 uri = f"ws://{host}:{port}/datalink"
 
 
-async def init_dali(host, port,
-        verbose=False,
-        programname="simpleDali",
-        username="dragrace",
-        processid=0,
-        architecture="python"):
+async def init_dali(
+    host,
+    port,
+    verbose=False,
+    programname="simpleDali",
+    username="dragrace",
+    processid=0,
+    architecture="python",
+):
     dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    #dali = simpledali.WebSocketDataLink(uri, verbose=True)
+    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
     serverId = await dali.id(programname, username, processid, architecture)
     print(f"Resp: {serverId}")
     return dali
+
 
 async def send_test_mseed(dali):
     network = "XX"
@@ -32,11 +36,13 @@ async def send_test_mseed(dali):
     channel = "HNZ"
     starttime = simpledali.utcnowWithTz()
     numsamples = 100
-    sampleRate=200
-    shortData = array("h") # shorts
+    sampleRate = 200
+    shortData = array("h")  # shorts
     for i in range(numsamples):
         shortData.append(i)
-    msh = simpledali.MiniseedHeader(network, station, location, channel, starttime, numsamples, sampleRate)
+    msh = simpledali.MiniseedHeader(
+        network, station, location, channel, starttime, numsamples, sampleRate
+    )
     msr = simpledali.MiniseedRecord(msh, shortData)
     print(f"before writeMSeed {starttime.isoformat()}")
     sendResult = await dali.writeMSeed(msr)
@@ -44,11 +50,11 @@ async def send_test_mseed(dali):
 
 
 async def main():
-    verbose=False
-    programname="simpleDali"
-    username="dragrace"
-    processid=0
-    architecture="python"
+    verbose = False
+    programname = "simpleDali"
+    username = "dragrace"
+    processid = 0
+    architecture = "python"
     dali = simpledali.SocketDataLink(host, port, verbose=verbose)
     # dali = simpledali.WebSocketDataLink(uri, verbose=True)
     serverId = await dali.id(programname, username, processid, architecture)
@@ -57,6 +63,7 @@ async def main():
         await send_test_mseed(dali)
         await asyncio.sleep(1)
     await dali.close()
+
 
 debug = False
 asyncio.run(main(), debug=debug)

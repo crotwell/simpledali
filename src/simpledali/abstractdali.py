@@ -10,8 +10,8 @@ from .util import datetimeToHPTime, optional_date
 
 NO_SOUP = "Write permission not granted, no soup for you!"
 
-class DataLink(ABC):
 
+class DataLink(ABC):
     def __init__(self, packet_size=-1, verbose=False):
         """init DataLink. Packet_size can be set, or can be acquired from the
         server by calling either parsedInfoStatus() or info("STATUS")
@@ -20,45 +20,43 @@ class DataLink(ABC):
         self.verbose = verbose
         self.token = None
         self.int_types = [
-          "RingSize",
-          "PacketSize",
-          "MaximumPacketID",
-          "MaximumPackets",
-          "TotalConnections",
-          "SelectedConnections",
-          "TotalStreams",
-          "EarliestPacketID",
-          "LatestPacketID",
-          "Port",
-          "StreamCount",
-          "RXByteCount",
-          "TotalStreams",
-          "SelectedStreams",
-          "TotalServerThreads",
+            "RingSize",
+            "PacketSize",
+            "MaximumPacketID",
+            "MaximumPackets",
+            "TotalConnections",
+            "SelectedConnections",
+            "TotalStreams",
+            "EarliestPacketID",
+            "LatestPacketID",
+            "Port",
+            "StreamCount",
+            "RXByteCount",
+            "TotalStreams",
+            "SelectedStreams",
+            "TotalServerThreads",
         ]
         self.float_types = [
-          "TXPacketRate",
-          "TXByteRate",
-          "RXPacketRate",
-          "RXByteRate",
-          "DataLatency",
-          "Latency",
-
+            "TXPacketRate",
+            "TXByteRate",
+            "RXPacketRate",
+            "RXByteRate",
+            "DataLatency",
+            "Latency",
         ]
         self.date_types = [
-          "StartTime",
-          "EarliestPacketCreationTime",
-          "EarliestPacketDataStartTime",
-          "EarliestPacketDataEndTime",
-          "LatestPacketCreationTime",
-          "LatestPacketDataStartTime",
-          "LatestPacketDataEndTime",
-          "ConnectionTime",
-          "PacketCreationTime",
-          "PacketDataStartTime",
-          "PacketDataEndTime",
+            "StartTime",
+            "EarliestPacketCreationTime",
+            "EarliestPacketDataStartTime",
+            "EarliestPacketDataEndTime",
+            "LatestPacketCreationTime",
+            "LatestPacketDataStartTime",
+            "LatestPacketDataEndTime",
+            "ConnectionTime",
+            "PacketCreationTime",
+            "PacketDataStartTime",
+            "PacketDataEndTime",
         ]
-
 
     @abstractmethod
     async def createDaliConnection(self):
@@ -82,46 +80,58 @@ class DataLink(ABC):
 
     async def write(self, streamid, hpdatastart, hpdataend, flags, data):
         if self.packet_size > 0 and len(data) > self.packet_size:
-             raise Exception(f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}")
-        header = "WRITE {} {:d} {:d} {} {:d}".format(streamid, hpdatastart, hpdataend, flags, len(data))
+            raise Exception(
+                f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}"
+            )
+        header = "WRITE {} {:d} {:d} {} {:d}".format(
+            streamid, hpdatastart, hpdataend, flags, len(data)
+        )
         r = await self.send(header, data)
         return r
 
     async def writeAck(self, streamid, hpdatastart, hpdataend, data):
-        await self.write(streamid, hpdatastart, hpdataend, 'A', data)
-        r = await  self.parseResponse()
-        if r.type == 'ERROR' and r.message.startswith("Write permission not granted, no soup for you!"):
+        await self.write(streamid, hpdatastart, hpdataend, "A", data)
+        r = await self.parseResponse()
+        if r.type == "ERROR" and r.message.startswith(
+            "Write permission not granted, no soup for you!"
+        ):
             # no write premission to ringserver, it usually closes connection
             await self.close()
         return r
 
     async def writeMSeed(self, msr):
-        streamid = "{}/MSEED".format(msr.codes(sep='_'))
+        streamid = "{}/MSEED".format(msr.codes(sep="_"))
         hpdatastart = datetimeToHPTime(msr.starttime())
         hpdataend = datetimeToHPTime(msr.endtime())
         if self.verbose:
-            print("simpleDali.writeMSeed {} {} {}".format(streamid, hpdatastart, hpdataend))
+            print(
+                "simpleDali.writeMSeed {} {} {}".format(
+                    streamid, hpdatastart, hpdataend
+                )
+            )
         r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack())
         return r
 
-
     async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
         if self.verbose:
-            print("simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend))
-        jsonAsByteArray = json.dumps(jsonMessage).encode('UTF-8')
+            print(
+                "simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend)
+            )
+        jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
         r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray)
         return r
 
     async def writeCommand(self, command, dataString=None):
-        if self.verbose: print("writeCommand: cmd: {} dataStr: {}".format(command, dataString))
+        if self.verbose:
+            print("writeCommand: cmd: {} dataStr: {}".format(command, dataString))
         dataBytes = None
-        if (dataString):
-            dataBytes = dataString.encode('UTF-8')
+        if dataString:
+            dataBytes = dataString.encode("UTF-8")
             header = "{} {}".format(command, len(dataBytes))
         else:
             header = command
         await self.send(header, dataBytes)
-        r = await  self.parseResponse()
+        r = await self.parseResponse()
         return r
 
     async def auth(self, token):
@@ -131,13 +141,16 @@ class DataLink(ABC):
         and util.decodeAuthToken().
         """
         self.token = token
-        if self.verbose: print("simpleDali.auth {} ".format(token))
+        if self.verbose:
+            print("simpleDali.auth {} ".format(token))
         if isinstance(token, str):
-            token = token.encode('utf-8')
+            token = token.encode("utf-8")
         header = "AUTHORIZATION {:d}".format(len(token))
         r = await self.send(header, token)
-        r = await  self.parseResponse()
-        if r.type == 'ERROR' and r.message.startswith("Write permission not granted, no soup for you!"):
+        r = await self.parseResponse()
+        if r.type == "ERROR" and r.message.startswith(
+            "Write permission not granted, no soup for you!"
+        ):
             # no write premission to ringserver, it usually closes connection
             await self.close()
         return r
@@ -188,7 +201,7 @@ class DataLink(ABC):
         # maybe one day can
         # return await self.read("EARLIEST")
         r = await self.positionEarliest()
-        if r.type == 'OK':
+        if r.type == "OK":
             return await self.read(r.value)
         else:
             print(f"position did not return OK: {r}")
@@ -198,7 +211,7 @@ class DataLink(ABC):
         # maybe one day can
         # return await self.read("LATEST")
         r = await self.positionLatest()
-        if r.type == 'OK':
+        if r.type == "OK":
             return await self.read(r.value)
         else:
             return r
@@ -220,25 +233,29 @@ class DataLink(ABC):
             await self.auth(self.token)
 
     async def parsedInfoStatus(self):
-        """ realy simple parsing of info status xml into dict"""
+        """realy simple parsing of info status xml into dict"""
         infoResponse = await self.info("STATUS")
-        if infoResponse.type != 'INFO' or infoResponse.value != 'STATUS':
-            raise Exception("Does not look like INFO STATUS DaliResponse: {} {}".format(infoResponse.type, infoResponse.value))
+        if infoResponse.type != "INFO" or infoResponse.value != "STATUS":
+            raise Exception(
+                "Does not look like INFO STATUS DaliResponse: {} {}".format(
+                    infoResponse.type, infoResponse.value
+                )
+            )
         xmlTree = defusedxml.ElementTree.fromstring(infoResponse.message)
         out = {}
-        for k,v in xmlTree.attrib.items():
+        for k, v in xmlTree.attrib.items():
             out[k] = self.info_typed(k, v)
         statusEl = xmlTree.find("Status")
         if statusEl is not None:
-            out['Status'] = self.status_xml_to_dict(statusEl)
+            out["Status"] = self.status_xml_to_dict(statusEl)
         return out
 
     def parse_capabilities(self, cap):
         items = cap.split()
         out = {}
         for i in items:
-            if ':' in i:
-                spliti = i.split(':')
+            if ":" in i:
+                spliti = i.split(":")
                 out[spliti[0]] = spliti[1]
                 if spliti[0] == "PACKETSIZE":
                     self.packet_size = int(spliti[1])
@@ -246,42 +263,46 @@ class DataLink(ABC):
 
     def status_xml_to_dict(self, statusEl):
         out = {}
-        for k,v in statusEl.attrib.items():
+        for k, v in statusEl.attrib.items():
             out[k] = self.info_typed(k, v)
-        if 'PacketSize' in out:
-            self.packet_size = out['PacketSize']
+        if "PacketSize" in out:
+            self.packet_size = out["PacketSize"]
         return out
 
     async def parsedInfoStreams(self):
-        """ realy simple parsing of info streams xml into dict"""
+        """realy simple parsing of info streams xml into dict"""
         streamsResponse = await self.info("STREAMS")
-        if streamsResponse.type != 'INFO' or streamsResponse.value != 'STREAMS':
-            raise Exception("Does not look like INFO STREAMS DaliResponse: {} {}".format(infoResponse.type, infoResponse.value))
+        if streamsResponse.type != "INFO" or streamsResponse.value != "STREAMS":
+            raise Exception(
+                "Does not look like INFO STREAMS DaliResponse: {} {}".format(
+                    infoResponse.type, infoResponse.value
+                )
+            )
         xmlTree = defusedxml.ElementTree.fromstring(streamsResponse.message)
         out = {}
         for c in xmlTree:
             out[c.tag] = {}
-            for k,v in c.attrib.items():
+            for k, v in c.attrib.items():
                 out[c.tag][k] = self.info_typed(k, v)
-            if c.tag =="Status":
-                out['Status'] = self.status_xml_to_dict(c)
+            if c.tag == "Status":
+                out["Status"] = self.status_xml_to_dict(c)
             elif c.tag.endswith("List"):
                 sublist = []
-                out[c.tag][c.tag[:len(c.tag)-4]] = sublist
+                out[c.tag][c.tag[: len(c.tag) - 4]] = sublist
                 for subc in c:
                     streamDict = {}
                     sublist.append(streamDict)
-                    for k,v in subc.attrib.items():
+                    for k, v in subc.attrib.items():
                         streamDict[k] = self.info_typed(k, v)
             else:
                 out[c.tag] = {}
-                for k,v in c.attrib.items():
+                for k, v in c.attrib.items():
                     out[c.tag][k] = self.info_typed(k, v)
 
                 else:
                     for subc in c:
                         out[c.tag][subc.tag] = {}
-                        for k,v in subc.attrib.items():
+                        for k, v in subc.attrib.items():
                             out[c.tag][subc.tag][k] = self.info_typed(k, v)
         return out
 

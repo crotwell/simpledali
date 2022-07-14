@@ -2,6 +2,7 @@ from .abstractdali import DataLink
 from .dalipacket import DaliPacket, DaliResponse
 import asyncio
 
+
 class SocketDataLink(DataLink):
     def __init__(self, host, port, verbose=False):
         super(SocketDataLink, self).__init__(verbose)
@@ -12,26 +13,33 @@ class SocketDataLink(DataLink):
 
     async def createDaliConnection(self):
         await self.close()
-        if self.verbose: print(f"connect {self.host}:{self.port}")
+        if self.verbose:
+            print(f"connect {self.host}:{self.port}")
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
     async def send(self, header, data):
         try:
-            h = header.encode('UTF-8')
+            h = header.encode("UTF-8")
             pre = "DL"
             if self.isClosed():
-                 await self.reconnect()
-            self.writer.write(pre.encode('UTF-8'))
-            lenByte = len(h).to_bytes(1, byteorder='big', signed=False)
+                await self.reconnect()
+            self.writer.write(pre.encode("UTF-8"))
+            lenByte = len(h).to_bytes(1, byteorder="big", signed=False)
             self.writer.write(lenByte)
-            if self.verbose: print("send pre {} as {}{:d}".format(pre, pre.encode('UTF-8'),lenByte[0]))
+            if self.verbose:
+                print(
+                    "send pre {} as {}{:d}".format(pre, pre.encode("UTF-8"), lenByte[0])
+                )
             self.writer.write(h)
-            if self.verbose: print("send head {}".format(header))
-            if(data):
+            if self.verbose:
+                print("send head {}".format(header))
+            if data:
                 self.writer.write(data)
-                if self.verbose: print("send data of size {:d}".format(len(data)))
+                if self.verbose:
+                    print("send data of size {:d}".format(len(data)))
             out = await self.writer.drain()
-            if self.verbose: print("drained")
+            if self.verbose:
+                print("drained")
             return out
         except:
             await self.close()
@@ -40,21 +48,26 @@ class SocketDataLink(DataLink):
     async def parseResponse(self):
         try:
             if self.isClosed():
-                 raise Exception("Connection is closed")
+                raise Exception("Connection is closed")
             pre = await self.reader.readexactly(3)
             # D ==> 68, L ==> 76
             if pre[0] == 68 and pre[1] == 76:
                 hSize = pre[2]
             else:
-                if self.verbose: print("did not receive DL from read pre {:d}{:d}{:d}".format(pre[0],pre[1],pre[2]))
+                if self.verbose:
+                    print(
+                        "did not receive DL from read pre {:d}{:d}{:d}".format(
+                            pre[0], pre[1], pre[2]
+                        )
+                    )
                 await self.close()
                 raise Exception("did not receive DL from read pre")
             h = await self.reader.readexactly(hSize)
             header = h.decode("utf-8")
-            type=None
-            value=None
-            message=None
-            #if self.verbose: print("parseRespone header: {}".format(h))
+            type = None
+            value = None
+            message = None
+            # if self.verbose: print("parseRespone header: {}".format(h))
             if header.startswith("PACKET "):
                 s = header.split(" ")
                 type = s[0]
@@ -65,14 +78,27 @@ class SocketDataLink(DataLink):
                 dataEndTime = s[5]
                 dSize = int(s[6])
                 data = await self.reader.readexactly(dSize)
-                return DaliPacket(type, streamId, packetId, packetTime, dataStartTime, dataEndTime, dSize, data)
+                return DaliPacket(
+                    type,
+                    streamId,
+                    packetId,
+                    packetTime,
+                    dataStartTime,
+                    dataEndTime,
+                    dSize,
+                    data,
+                )
             elif header.startswith("ID "):
                 s = header.split(" ")
                 type = s[0]
                 value = ""
                 message = header[3:]
                 return DaliResponse(type, value, message)
-            elif (header.startswith("INFO ") or header.startswith("OK ") or header.startswith("ERROR ")):
+            elif (
+                header.startswith("INFO ")
+                or header.startswith("OK ")
+                or header.startswith("ERROR ")
+            ):
                 s = header.split(" ")
                 type = s[0]
                 value = s[1]
@@ -83,7 +109,11 @@ class SocketDataLink(DataLink):
             elif header == "ENDSTREAM":
                 return DaliResponse(header, value, message)
             else:
-                raise Exception("Header does not start with INFO, ID, PACKET, OK or ERROR: {}".format(header))
+                raise Exception(
+                    "Header does not start with INFO, ID, PACKET, OK or ERROR: {}".format(
+                        header
+                    )
+                )
             return DaliResponse(type, value, message)
         except:
             await self.close()
