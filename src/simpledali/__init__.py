@@ -1,5 +1,5 @@
 from .abstractdali import DataLink
-from .dalipacket import DaliPacket, DaliResponse
+from .dalipacket import DaliPacket, DaliResponse, DaliException
 from .jsonencoder import JsonEncoder
 from .util import datetimeToHPTime, hptimeToDatetime, utcnowWithTz, encodeAuthToken
 from .socketdali import SocketDataLink
@@ -10,6 +10,7 @@ from .miniseed import (
     unpackMiniseedHeader,
     unpackMiniseedRecord,
     unpackBlockette,
+    MiniseedException,
 )
 from .dali2jsonl import Dali2Jsonl
 
@@ -17,6 +18,7 @@ __all__ = [
     DataLink,
     DaliResponse,
     DaliPacket,
+    DaliException,
     Dali2Jsonl,
     datetimeToHPTime,
     hptimeToDatetime,
@@ -27,6 +29,7 @@ __all__ = [
     WebSocketDataLink,
     MiniseedHeader,
     MiniseedRecord,
+    MiniseedException,
     unpackMiniseedHeader,
     unpackMiniseedRecord,
     unpackBlockette,

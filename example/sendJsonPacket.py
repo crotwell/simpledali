@@ -32,19 +32,19 @@ async def send_test_json(dali):
 
 
 async def main():
+    numSend = 3
     verbose = False
     programname = "simpleDali"
     username = "dragrace"
     processid = 0
     architecture = "python"
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    # dali = simpledali.WebSocketDataLink(uri, verbose=verbose)
-    serverId = await dali.id(programname, username, processid, architecture)
-    print(f"Resp: {serverId}")
-    for i in range(1):
-        await send_test_json(dali)
-        await asyncio.sleep(1)
-    await dali.close()
+    async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
+    # async with simpledali.WebSocketDataLink(uri, verbose=verbose) as dali:
+        serverId = await dali.id(programname, username, processid, architecture)
+        print(f"Id: {serverId}")
+        for i in range(numSend):
+            await send_test_json(dali)
+            await asyncio.sleep(1)
 
 
 debug = False

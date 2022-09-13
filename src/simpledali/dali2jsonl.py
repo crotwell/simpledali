@@ -70,19 +70,17 @@ class Dali2Jsonl:
     async def run(self):
         if self.verbose:
             print(f"Running...")
-        self.dali = SocketDataLink(self.host, self.port, verbose=self.verbose)
-        await self.dali.createDaliConnection()
-        # very good idea to call id at start, both for logging on server
-        # side and to get capabilities like packet size or write ability
-        serverId = await self.dali.id(
-            self.programname, self.username, self.processid, self.architecture
-        )
-        print(f"Id: {serverId}")
+        async with SocketDataLink(self.host, self.port, verbose=self.verbose) as dali:
+            # very good idea to call id at start, both for logging on server
+            # side and to get capabilities like packet size or write ability
+            serverId = await self.dali.id(
+                self.programname, self.username, self.processid, self.architecture
+            )
+            print(f"Id: {serverId}")
 
-        await self.dali.match(self.match)
-        await self.stream_data()
+            await self.dali.match(self.match)
+            await self.stream_data()
 
-        await self.dali.close()
         if self.verbose:
             print(f"Done.")
         return 0
@@ -92,8 +90,7 @@ class Dali2Jsonl:
         if self.verbose:
             print(f"Stream")
         try:
-            while not self.dali.isClosed():
-                daliPacket = await self.dali.parseResponse()
+            async for daliPacket in self.dali.stream():
                 if self.verbose:
                     print(f"Got Dali packet: {daliPacket}")
                 if daliPacket.streamId.endswith("/JSON"):

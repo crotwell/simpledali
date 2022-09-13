@@ -3,19 +3,22 @@ import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
-from .dalipacket import DaliPacket, DaliResponse
+from .dalipacket import DaliPacket, DaliResponse, DaliException
 from .util import datetimeToHPTime, optional_date
 
 # https://iris-edu.github.io/libdali/datalink-protocol.html
 
 NO_SOUP = "Write permission not granted, no soup for you!"
 
+QUERY_MODE="query"
+STREAM_MODE="stream"
 
 class DataLink(ABC):
     def __init__(self, packet_size=-1, verbose=False):
         """init DataLink. Packet_size can be set, or can be acquired from the
         server by calling either parsedInfoStatus() or info("STATUS")
         """
+        self.__mode = QUERY_MODE
         self.packet_size = packet_size
         self.verbose = verbose
         self.token = None
@@ -58,6 +61,13 @@ class DataLink(ABC):
             "PacketDataEndTime",
         ]
 
+    async def __aenter__(self):
+        await self.createDaliConnection()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.close()
+
     @abstractmethod
     async def createDaliConnection(self):
         pass
@@ -78,10 +88,23 @@ class DataLink(ABC):
     async def close(self):
         pass
 
+    def isQueryMode(self):
+        return not self.isStreamMode()
+
+    def isStreamMode(self):
+        return self.__mode == STREAM_MODE
+
+    def updateMode(self, header):
+        if header == "ENDSTREAM":
+            self.__mode = QUERY_MODE
+        elif header == "STREAM":
+            self.__mode = STREAM_MODE
+        # otherwise leave as is
+
     async def write(self, streamid, hpdatastart, hpdataend, flags, data):
         if self.packet_size > 0 and len(data) > self.packet_size:
-            raise Exception(
-                f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}"
+            raise DaliException(
+                f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}",
             )
         header = "WRITE {} {:d} {:d} {} {:d}".format(
             streamid, hpdatastart, hpdataend, flags, len(data)
@@ -132,7 +155,12 @@ class DataLink(ABC):
             header = command
         await self.send(header, dataBytes)
         r = await self.parseResponse()
-        return r
+        if r.type == "ERROR":
+            if self.isClosed():
+                self.__mode = QUERY_MODE
+            raise DaliException(f"Write {command} failed", r)
+        else:
+            return r
 
     async def auth(self, token):
         """
@@ -217,6 +245,17 @@ class DataLink(ABC):
             return r
 
     async def stream(self):
+        if not self.isStreamMode():
+            await self.startStream()
+        try:
+            while not self.isClosed() and self.isStreamMode():
+                daliPacket = await self.parseResponse()
+                yield daliPacket
+        finally:
+            if not self.isClosed():
+                await self.endStream()
+
+    async def startStream(self):
         header = "STREAM"
         await self.send(header, None)
 
@@ -225,7 +264,7 @@ class DataLink(ABC):
         await self.send(header, None)
 
     async def reconnect(self):
-        if self.verbose:
+        if True or self.verbose:
             print("reconnecting...")
         await self.close()
         await self.createDaliConnection()
@@ -236,10 +275,9 @@ class DataLink(ABC):
         """realy simple parsing of info status xml into dict"""
         infoResponse = await self.info("STATUS")
         if infoResponse.type != "INFO" or infoResponse.value != "STATUS":
-            raise Exception(
-                "Does not look like INFO STATUS DaliResponse: {} {}".format(
-                    infoResponse.type, infoResponse.value
-                )
+            raise DaliException(
+                f"Does not look like INFO STATUS DaliResponse: {infoResponse.type} {infoResponse.value}",
+                infoResponse
             )
         xmlTree = defusedxml.ElementTree.fromstring(infoResponse.message)
         out = {}
@@ -273,10 +311,9 @@ class DataLink(ABC):
         """realy simple parsing of info streams xml into dict"""
         streamsResponse = await self.info("STREAMS")
         if streamsResponse.type != "INFO" or streamsResponse.value != "STREAMS":
-            raise Exception(
-                "Does not look like INFO STREAMS DaliResponse: {} {}".format(
-                    infoResponse.type, infoResponse.value
-                )
+            raise DaliException(
+                f"Does not look like INFO STREAMS DaliResponse: {streamsResponse.type} {streamsResponse.value}",
+                streamsResponse
             )
         xmlTree = defusedxml.ElementTree.fromstring(streamsResponse.message)
         out = {}

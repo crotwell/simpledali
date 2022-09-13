@@ -39,3 +39,14 @@ class DaliPacket:
             self.dataEndTime,
             self.dSize,
         )
+
+class DaliException(Exception):
+    def __init__(self, message, daliResponse=None):
+        super().__init__(message, daliResponse)
+        self.message = message
+        self.daliResponse = daliResponse
+    def __str__(self):
+        if self.daliResponse is not None:
+            return f"Dali {self.daliResponse.type}: {self.daliResponse.message}"
+        else:
+            return super.__str__()

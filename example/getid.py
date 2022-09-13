@@ -13,11 +13,10 @@ async def main():
     username = "dragrace"
     processid = 0
     architecture = "python"
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
-    serverId = await dali.id(programname, username, processid, architecture)
-    print(f"Resp: {serverId}")
-    await dali.close()
+    async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
+        # dali = simpledali.WebSocketDataLink(uri, verbose=True)
+        serverId = await dali.id(programname, username, processid, architecture)
+        print(f"Id: {serverId.message}")
 
 
 asyncio.run(main())

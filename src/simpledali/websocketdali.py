@@ -1,8 +1,7 @@
-from .abstractdali import DataLink
+from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE
 from .dalipacket import DaliPacket, DaliResponse
 import asyncio
 import websockets
-
 
 class WebSocketDataLink(DataLink):
     def __init__(self, uri, verbose=False, ping_interval=None):
@@ -22,10 +21,15 @@ class WebSocketDataLink(DataLink):
     async def send(self, header, data):
         try:
             if self.isClosed():
-                await self.reconnect()
+                if header == "ENDSTREAM":
+                    # no need to reopen conn just to endstream
+                    self.updateMode(header)
+                    return
+                else:
+                    await self.reconnect()
             h = header.encode("UTF-8")
             if len(h) > 255:
-                raise Exception("header lengh must be <= 255, {}".format(len(h)))
+                raise DaliException("header lengh must be <= 255, {}".format(len(h)))
             pre = "DL"
             sendBytesLen = 3 + len(h)
             if data:
@@ -42,6 +46,7 @@ class WebSocketDataLink(DataLink):
             out = await self.ws.send(bytes(sendBytes))
             if self.verbose:
                 print("sent {}{} {}".format(pre, len(h), header))
+            self.updateMode(header)
             return out
         except:
             await self.close()
@@ -50,7 +55,7 @@ class WebSocketDataLink(DataLink):
     async def parseResponse(self):
         try:
             if self.isClosed():
-                raise Exception("Connection is closed")
+                raise DaliException("Connection is closed")
             response = await self.ws.recv()
             # pre header
             # D ==> 68, L ==> 76
@@ -64,7 +69,7 @@ class WebSocketDataLink(DataLink):
                         )
                     )
                 await self.close()
-                raise Exception("did not receive DL from read pre")
+                raise DaliException("did not receive DL from read pre")
             h = response[3 : hSize + 3]
             header = h.decode("utf-8")
             type = None
@@ -97,7 +102,6 @@ class WebSocketDataLink(DataLink):
                 type = s[0]
                 value = ""
                 message = header[3:]
-                return DaliResponse(type, value, message)
             elif (
                 header.startswith("INFO ")
                 or header.startswith("OK ")
@@ -111,12 +115,10 @@ class WebSocketDataLink(DataLink):
                 message = m.decode("utf-8")
                 return DaliResponse(type, value, message)
             elif header == "ENDSTREAM":
-                return DaliResponse(header, value, message)
+                type = header
             else:
-                raise Exception(
-                    "Header does not start with INFO, ID, PACKET, OK or ERROR: {}".format(
-                        header
-                    )
+                raise DaliException(
+                    f"Header does not start with INFO, ID, PACKET, ENDSTREAM, OK or ERROR: {header}",
                 )
             return DaliResponse(type, value, message)
         except:
@@ -124,9 +126,15 @@ class WebSocketDataLink(DataLink):
             raise
 
     def isClosed(self):
-        return self.ws is None or not self.ws.open
+        ans = self.ws is None or not self.ws.open
+        if ans:
+            # is socket is closed, make sure other state is updated
+            self.ws = None
+            self.__mode = QUERY_MODE
+        return ans
 
     async def close(self):
         if self.ws is not None:
             await self.ws.close()
             self.ws = None
+        self.__mode = QUERY_MODE
