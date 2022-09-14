@@ -14,9 +14,12 @@ print(sid == sid3)
 
 print(sid.stationSourceId())
 print(sid.stationSourceId() == sid2.stationSourceId())
+print(sid.stationSourceId() == simpledali.FDSNSourceId.parse("FDSN:CO_JSC"))
+
 
 print(sid.networkSourceId())
 print(sid.networkSourceId() == sid2.networkSourceId())
+print(sid.networkSourceId() == simpledali.FDSNSourceId.parse("FDSN:CO"))
 
 print(simpledali.FDSNSourceId.createUnknown())
 print(simpledali.FDSNSourceId.createUnknown(100))

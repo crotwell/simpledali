@@ -38,13 +38,17 @@ class FDSNSourceId:
     return FDSNSourceId("XX", "ABC", "", bandCodeForRate(sampRate), "Y", "X")
 
   @staticmethod
-  def parse(id: str) -> 'FDSNSourceId':
+  def parse(id: str) -> Union['FDSNSourceId','NetworkSourceId','StationSourceId']:
     if (not id.startswith(FDSN_PREFIX)):
       raise FDSNSourceIdException (f"sourceid must start with {FDSN_PREFIX}: {id}")
 
     items = id[len(FDSN_PREFIX):].split(SEP)
-    if (len(items) != 6):
-      raise FDSNSourceIdException (f"channel sourceid must have 6 items separated by '{SEP}': {id}")
+    if (len(items) == 1):
+        return NetworkSourceId(items[0])
+    elif len(items) == 2:
+        return StationSourceId(items[0], items[1])
+    elif (len(items) != 6):
+      raise FDSNSourceIdException (f"FDSN sourceid must have 6 items for channel, 2 for station or 1 for network; separated by '{SEP}': {id}")
 
     return FDSNSourceId(items[0],items[1],items[2],items[3],items[4],items[5])
 
@@ -212,3 +216,18 @@ class NslcId:
 
 class FDSNSourceIdException(Exception):
     pass
+
+def main():
+    import sys
+    for a in sys.argv[1:]:
+        sid = FDSNSourceId.parse(a)
+        print(f"      {sid}")
+        print(f"       Net: {sid.networkCode}")
+        print(f"       Sta: {sid.stationCode}")
+        print(f"       Loc: {sid.locationCode}")
+        print(f"      Band: {sid.bandCode}")
+        print(f"    Source: {sid.sourceCode}")
+        print(f" Subsource: {sid.subsourceCode}")
+
+if __name__ == "__main__":
+    main()
