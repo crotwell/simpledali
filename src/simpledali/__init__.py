@@ -13,6 +13,13 @@ from .miniseed import (
     MiniseedException,
 )
 from .dali2jsonl import Dali2Jsonl
+from .fdsnsourceid import (
+    FDSNSourceId,
+    NetworkSourceId,
+    StationSourceId,
+    LocationSourceId,
+    bandCodeForRate,
+)
 
 __all__ = [
     DataLink,
@@ -33,4 +40,9 @@ __all__ = [
     unpackMiniseedHeader,
     unpackMiniseedRecord,
     unpackBlockette,
+    FDSNSourceId,
+    NetworkSourceId,
+    StationSourceId,
+    LocationSourceId,
+    bandCodeForRate,
 ]
