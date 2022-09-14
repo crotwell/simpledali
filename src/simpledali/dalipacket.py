@@ -49,4 +49,4 @@ class DaliException(Exception):
         if self.daliResponse is not None:
             return f"Dali {self.daliResponse.type}: {self.daliResponse.message}"
         else:
-            return super.__str__()
+            return self.message

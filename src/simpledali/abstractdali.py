@@ -104,7 +104,7 @@ class DataLink(ABC):
     async def write(self, streamid, hpdatastart, hpdataend, flags, data):
         if self.packet_size > 0 and len(data) > self.packet_size:
             raise DaliException(
-                f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}",
+                f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}"
             )
         header = "WRITE {} {:d} {:d} {} {:d}".format(
             streamid, hpdatastart, hpdataend, flags, len(data)
