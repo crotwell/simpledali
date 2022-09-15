@@ -1,3 +1,10 @@
+from .fdsnsourceid import FDSNSourceId, FDSN_PREFIX
+
+JSON_TYPE = "JSON"
+BZ2_JSON_TYPE = "BZJSON"
+MSEED_TYPE = "MSEED"
+MSEED3_TYPE = "MSEED3"
+
 class DaliResponse:
     def __init__(self, type, value, message):
         self.type = type
@@ -28,7 +35,14 @@ class DaliPacket:
         self.dataEndTime = dataEndTime
         self.dSize = dSize
         self.data = data
-
+    def streamIdChannel(self):
+        return self.streamId.split("/")[0]
+    def streamIdType(self):
+        s = self.streamId.split("/")
+        if len(s)>1:
+            return s[1]
+        else:
+            return ""
     def __str__(self):
         return "{} {} {} {} {} {} {}".format(
             self.type,
@@ -50,3 +64,12 @@ class DaliException(Exception):
             return f"Dali {self.daliResponse.type}: {self.daliResponse.message}"
         else:
             return self.message
+
+def nslcToStreamId(net: str, sta: str, loc: str, chan: str, type: str) -> str:
+    return f"{net}_{sta}_{loc}_{chan}/{type}"
+
+def fdsnSourceIdToStreamId(sourceId: 'FDSNSourceId', type: str) -> str:
+    sid = sourceId.__str__()
+    if sid.startswith(FDSN_PREFIX):
+        sid = sid[len(FDSN_PREFIX):]
+    return f"{sid}/{type}"

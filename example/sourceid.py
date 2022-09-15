@@ -25,3 +25,6 @@ print(simpledali.FDSNSourceId.createUnknown())
 print(simpledali.FDSNSourceId.createUnknown(100))
 print(simpledali.FDSNSourceId.createUnknown(1))
 print(simpledali.FDSNSourceId.createUnknown(.01))
+
+print(simpledali.nslcToStreamId("CO", "JSC", "00", "HHZ", "MSEED"))
+print(simpledali.fdsnSourceIdToStreamId(sid, "MSEED"))

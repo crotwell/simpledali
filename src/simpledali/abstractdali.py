@@ -4,7 +4,15 @@ import bz2
 import json
 from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
-from .dalipacket import DaliPacket, DaliResponse, DaliException
+from .dalipacket import (
+    DaliPacket,
+    DaliResponse,
+    DaliException,
+    nslcToStreamId,
+    fdsnSourceIdToStreamId,
+    MSEED_TYPE,
+    MSEED3_TYPE
+)
 from .util import datetimeToHPTime, optional_date
 
 # https://iris-edu.github.io/libdali/datalink-protocol.html
@@ -122,7 +130,11 @@ class DataLink(ABC):
         return r
 
     async def writeMSeed(self, msr):
-        streamid = "{}/MSEED".format(msr.codes(sep="_"))
+        streamid = nslcToStreamId(msr.header.network,
+                                  msr.header.station,
+                                  msr.header.location,
+                                  msr.header.channel,
+                                  MSEED_TYPE)
         hpdatastart = datetimeToHPTime(msr.starttime())
         hpdataend = datetimeToHPTime(msr.endtime())
         if self.verbose:

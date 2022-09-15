@@ -1,5 +1,11 @@
 from .abstractdali import DataLink
-from .dalipacket import DaliPacket, DaliResponse, DaliException
+from .dalipacket import (
+    DaliPacket,
+    DaliResponse,
+    DaliException,
+    nslcToStreamId,
+    fdsnSourceIdToStreamId,
+)
 from .jsonencoder import JsonEncoder
 from .util import datetimeToHPTime, hptimeToDatetime, utcnowWithTz, encodeAuthToken
 from .socketdali import SocketDataLink
@@ -26,6 +32,8 @@ __all__ = [
     DaliResponse,
     DaliPacket,
     DaliException,
+    nslcToStreamId,
+    fdsnSourceIdToStreamId,
     Dali2Jsonl,
     datetimeToHPTime,
     hptimeToDatetime,

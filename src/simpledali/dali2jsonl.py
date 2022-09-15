@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     import tomli as tomllib
 
 from .abstractdali import DataLink
-from .dalipacket import DaliPacket, DaliResponse
+from .dalipacket import DaliPacket, DaliResponse, JSON_TYPE, BZ2_JSON_TYPE, MSEED_TYPE
 from .jsonencoder import JsonEncoder
 from .util import datetimeToHPTime, hptimeToDatetime, utcnowWithTz, encodeAuthToken
 from .socketdali import SocketDataLink
@@ -22,9 +22,6 @@ from .websocketdali import WebSocketDataLink
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 16000
-
-JSON_SUFFIX = "/JSON"
-BZ2_JSON_SUFFIX = "/BZJSON"
 
 Allowed_Flags = ["n", "s", "l", "c", "Y", "j", "H"]
 
@@ -94,11 +91,11 @@ class Dali2Jsonl:
             async for daliPacket in dali.stream():
                 if self.verbose:
                     print(f"Got Dali packet: {daliPacket}")
-                if daliPacket.streamId.endswith(JSON_SUFFIX):
+                if daliPacket.streamIdType == JSON_TYPE:
                     if self.verbose:
                         print(f"    JSON: {daliPacket.data.decode('utf-8')}")
                     self.saveToJSONL(daliPacket)
-                elif daliPacket.streamId.endswith(BZ2_JSON_SUFFIX):
+                elif daliPacket.streamIdType == BZ2_JSON_TYPE:
                     daliPacket.data = bz2.decompress(daliPacket.data)
                     daliPacket.dSize = len(daliPacket.data)
                     if self.verbose:
@@ -113,14 +110,14 @@ class Dali2Jsonl:
         start = hptimeToDatetime(daliPacket.dataStartTime)
         codesStr = daliPacket.streamId
         # remove "type" like /JSON
-        codesStr = codesStr.split("/")[0]
+        codesStr = daliPacket.streamIdChannel()
         codes = codesStr.split("_")
         chan = ""
         loc = ""
         sta = ""
         net = ""
         if len(codes) > 3:
-            chan = codes[3]
+            chan = '_'.join(codes[3:])
         if len(codes) > 2:
             loc = codes[2]
         if len(codes) > 1:
