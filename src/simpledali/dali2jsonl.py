@@ -30,11 +30,13 @@ class Dali2Jsonl:
     """Archive JSON Datalink records as JSONL."""
 
     def __init__(
-        self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, verbose=False
+        self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, websocketurl=None, verbose=False
     ):
         self.checkPattern(writePattern)
         self.match = match
         self.writePattern = writePattern
+        self.websocketurl = websocketurl
+
         if host is not None:
             self.host = host
         else:
@@ -63,26 +65,35 @@ class Dali2Jsonl:
             conf["jsonl"]["write"],
             host=conf["datalink"]["host"],
             port=conf["datalink"]["port"],
+            websocketurl=conf["datalink"]["websocket"],
             verbose=verbose,
         )
 
     async def run(self):
+        if self.websocketurl:
+            async with WebSocketDataLink(self.websocketurl, verbose=self.verbose) as dali:
+                await self.do_dali(dali)
+        else:
+            async with SocketDataLink(self.host, self.port, verbose=self.verbose) as dali:
+                await self.do_dali(dali)
+        return 0
+
+    async def do_dali(self, dali):
         if self.verbose:
             print(f"Running...")
-        async with SocketDataLink(self.host, self.port, verbose=self.verbose) as dali:
-            # very good idea to call id at start, both for logging on server
-            # side and to get capabilities like packet size or write ability
-            serverId = await dali.id(
-                self.programname, self.username, self.processid, self.architecture
-            )
+        # very good idea to call id at start, both for logging on server
+        # side and to get capabilities like packet size or write ability
+        serverId = await dali.id(
+            self.programname, self.username, self.processid, self.architecture
+        )
+        if self.verbose:
             print(f"Id: {serverId}")
 
-            await dali.match(self.match)
-            await self.stream_data(dali)
+        await dali.match(self.match)
+        await self.stream_data(dali)
 
         if self.verbose:
             print(f"Done.")
-        return 0
 
     async def stream_data(self, dali):
         if self.verbose:
@@ -193,10 +204,15 @@ class Dali2Jsonl:
                 dali_conf["architecture"] = "python"
             if "match" not in dali_conf:
                 raise ValueError("match is required in configuration toml")
-            if "host" not in dali_conf:
-                dali_conf["host"] = DEFAULT_HOST
-            if "port" not in dali_conf:
-                dali_conf["port"] = DEFAULT_PORT
+            if "websocket" not in dali_conf:
+                dali_conf["websocket"] = None
+                if "host" not in dali_conf:
+                    dali_conf["host"] = DEFAULT_HOST
+                if "port" not in dali_conf:
+                    dali_conf["port"] = DEFAULT_PORT
+            else:
+                dali_conf["host"] = None
+                dali_conf["port"] = None
         if "jsonl" not in conf:
             raise ValueError("[jsonl] is required in configuration toml")
             jsonl_conf = conf["jsonl"]
