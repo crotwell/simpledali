@@ -1,5 +1,6 @@
 import simpledali
 import asyncio
+import bz2
 import json
 import logging
 from datetime import datetime, timedelta
@@ -16,36 +17,25 @@ uri = f"ws://{host}:{port}/datalink"
 # ping_interval=5
 ping_interval = None  # to disable ping-pong until ringserver supports, this is default
 
-async def iter_stream_data(dali, max=5):
+async def stream_data(dali, max=0):
     print(f"Stream")
     count = 0
     async for daliPacket in dali.stream():
         count += 1
         print(f"Got Dali packet: {daliPacket}")
-        if daliPacket.streamId.endswith("/MSEED"):
+        if daliPacket.streamIdType() == simpledali.MSEED_TYPE:
             msr = simpledali.miniseed.unpackMiniseedRecord(daliPacket.data)
             print(f"    MSeed: {msr}")
-        elif daliPacket.streamId.endswith("/JSON"):
+        elif daliPacket.streamIdType() == simpledali.JSON_TYPE:
             print(f"    JSON: {daliPacket.data.decode('utf-8')}")
+        elif daliPacket.streamIdType() == simpledali.BZ2_JSON_TYPE:
+            daliPacket.data = bz2.decompress(daliPacket.data)
+            print(f"    BZ2 JSON: {daliPacket.data.decode('utf-8')}")
+        else:
+            print(f"    Unknown type")
         if max > 0 and count >= max:
+            print(f"End Stream: {count}>={max}")
             await dali.endStream()
-
-async def stream_data(dali):
-    await dali.stream()
-    print(f"Stream")
-    try:
-        while not dali.isClosed():
-            daliPacket = await dali.parseResponse()
-            print(f"Got Dali packet: {daliPacket}")
-            if daliPacket.streamId.endswith("/MSEED"):
-                msr = simpledali.miniseed.unpackMiniseedRecord(daliPacket.data)
-                print(f"    MSeed: {msr}")
-            elif daliPacket.streamId.endswith("/JSON"):
-                print(f"    JSON: {daliPacket.data.decode('utf-8')}")
-    except asyncio.exceptions.CancelledError:
-        print(f"Dali task cancelled")
-        return
-
 
 async def main(host, port, verbose=False):
     # these all have defaults
@@ -123,8 +113,7 @@ async def main(host, port, verbose=False):
         # to avoid getting way to much data
         await dali.match("^XX_.*")
         # stream data
-        #await stream_data(dali)
-        await iter_stream_data(dali, max=2)
+        await stream_data(dali, max=5)
         # dali will be closed automatically here by "async with"
 
 try:
