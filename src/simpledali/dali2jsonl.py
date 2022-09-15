@@ -2,6 +2,7 @@
 """Archive JSON Datalink records as JSON Lines."""
 import os
 import argparse
+import bz2
 import asyncio
 import pathlib
 import re
@@ -23,6 +24,7 @@ DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 16000
 
 JSON_SUFFIX = "/JSON"
+BZ2_JSON_SUFFIX = "/BZJSON"
 
 Allowed_Flags = ["n", "s", "l", "c", "Y", "j", "H"]
 
@@ -92,9 +94,15 @@ class Dali2Jsonl:
             async for daliPacket in dali.stream():
                 if self.verbose:
                     print(f"Got Dali packet: {daliPacket}")
-                if daliPacket.streamId.endswith("/JSON"):
+                if daliPacket.streamId.endswith(JSON_SUFFIX):
                     if self.verbose:
                         print(f"    JSON: {daliPacket.data.decode('utf-8')}")
+                    self.saveToJSONL(daliPacket)
+                elif daliPacket.streamId.endswith(BZ2_JSON_SUFFIX):
+                    daliPacket.data = bz2.decompress(daliPacket.data)
+                    daliPacket.dSize = len(daliPacket.data)
+                    if self.verbose:
+                        print(f"    BZ2 JSON: {daliPacket.data.decode('utf-8')}")
                     self.saveToJSONL(daliPacket)
         except asyncio.exceptions.CancelledError:
             if self.verbose:

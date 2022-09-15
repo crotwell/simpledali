@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import asyncio
+import bz2
 import json
 from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
@@ -115,9 +116,7 @@ class DataLink(ABC):
     async def writeAck(self, streamid, hpdatastart, hpdataend, data):
         await self.write(streamid, hpdatastart, hpdataend, "A", data)
         r = await self.parseResponse()
-        if r.type == "ERROR" and r.message.startswith(
-            "Write permission not granted, no soup for you!"
-        ):
+        if r.type == "ERROR" and r.message.startswith(NO_SOUP):
             # no write premission to ringserver, it usually closes connection
             await self.close()
         return r
@@ -142,6 +141,18 @@ class DataLink(ABC):
             )
         jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
         r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray)
+        return r
+
+    async def writeBZ2JSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
+        if self.verbose:
+            print(
+                "simpleDali.writeBZ2JSON {} {} {}".format(streamid, hpdatastart, hpdataend)
+            )
+        jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
+        compressedJson = bz2.compress(jsonAsByteArray)
+        if self.verbose:
+            print(f"Bzip2 compress {len(jsonAsByteArray)} to {len(compressedJson)} bytes")
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, compressedJson)
         return r
 
     async def writeCommand(self, command, dataString=None):
