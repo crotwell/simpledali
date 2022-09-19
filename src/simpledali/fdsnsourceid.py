@@ -33,8 +33,9 @@ class FDSNSourceId:
     self.sourceCode = sourceCode
     self.subsourceCode = subsourceCode
 
+
   @staticmethod
-  def createUnknown(sampRate: Optional[Union[float | int ]] = None) -> 'FDSNSourceId':
+  def createUnknown(sampRate: Optional[Union[float , int ]] = None) -> 'FDSNSourceId':
     return FDSNSourceId("XX", "ABC", "", bandCodeForRate(sampRate), "Y", "X")
 
   @staticmethod
@@ -156,8 +157,8 @@ class LocationSourceId:
     return str(self) == str(other)
 
 
-def bandCodeForRate(sampRate: Optional[Union[float | int ]] = None,
-                    resp_lb: Optional[Union[float | int ]] = None) -> str:
+def bandCodeForRate(sampRate: Optional[Union[float , int ]] = None,
+                    resp_lb: Optional[Union[float , int ]] = None) -> str:
   if (sampRate is None):
     return 'I'
 
