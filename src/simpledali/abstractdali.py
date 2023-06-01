@@ -13,7 +13,11 @@ from .dalipacket import (
     MSEED_TYPE,
     MSEED3_TYPE
 )
-from .util import datetimeToHPTime, optional_date
+from .util import (
+    datetimeToHPTime,
+    optional_date,
+    MICROS
+)
 
 # https://iris-edu.github.io/libdali/datalink-protocol.html
 

@@ -10,7 +10,7 @@ def datetimeToHPTime(time):
 
 
 def hptimeToDatetime(hptime):
-    dt = datetime.utcfromtimestamp(float(hptime) / MICROS)
+    dt = datetime.fromtimestamp(float(hptime) / MICROS, timezone.utc)
     return dt
 
 
