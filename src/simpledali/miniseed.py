@@ -259,7 +259,10 @@ class MiniseedRecord:
         # if offset < 64:
         #    offset = 64
         struct.pack_into(self.header.endianChar + "H", recordBytes, 44, offset)
-        self.packData(recordBytes, offset, self.__data)
+        if self.encodedData is not None and self.__data is None:
+            recordBytes[offset : offset + len(self.encodedData)] = self.encodedData
+        else:
+            self.packData(recordBytes, offset, self.__data)
         return recordBytes
 
     def packBlockette(self, recordBytes, offset, b):
