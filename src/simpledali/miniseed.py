@@ -239,6 +239,9 @@ class MiniseedRecord:
     def endtime(self):
         return self.starttime() + self.header.sampPeriod * (self.header.numsamples - 1)
 
+    def next_starttime(self):
+        return self.starttime() + self.header.sampPeriod * (self.header.numsamples)
+
     def clone(self):
         return unpackMiniseedRecord(self.pack())
 
