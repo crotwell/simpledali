@@ -400,9 +400,10 @@ def unpackBlockette(recordBytes, offset, endianChar, dataOffset):
     blocketteNum, nextOffset = struct.unpack(
         endianChar + "HH", recordBytes[offset : offset + 4]
     )
+    endOffset = nextOffset
     if nextOffset == 0:
         # in case of last blockette, might need to use all until dataOffset
-        nextOffset = dataOffset
+        endOffset = dataOffset
     #  I do not think I should have to convert to int, but it did not work if I did not convert -- tjo
     bnum = int(blocketteNum)
     #    print ("Blockette Number in unpackBlockette:", blocketteNum," ",bnum)
@@ -410,7 +411,7 @@ def unpackBlockette(recordBytes, offset, endianChar, dataOffset):
         return unpackBlockette1000(recordBytes, offset, endianChar)
     else:
         return BlocketteUnknown(
-            blocketteNum, nextOffset, recordBytes[offset:nextOffset]
+            blocketteNum, nextOffset, recordBytes[offset:endOffset]
         )
 
 
