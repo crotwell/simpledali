@@ -396,10 +396,13 @@ def unpackMiniseedHeader(recordBytes, endianChar=">"):
     )
 
 
-def unpackBlockette(recordBytes, offset, endianChar):
+def unpackBlockette(recordBytes, offset, endianChar, dataOffset):
     blocketteNum, nextOffset = struct.unpack(
         endianChar + "HH", recordBytes[offset : offset + 4]
     )
+    if nextOffset == 0:
+        # in case of last blockette, might need to use all until dataOffset
+        nextOffset = dataOffset
     #  I do not think I should have to convert to int, but it did not work if I did not convert -- tjo
     bnum = int(blocketteNum)
     #    print ("Blockette Number in unpackBlockette:", blocketteNum," ",bnum)
@@ -451,7 +454,7 @@ def unpackMiniseedRecord(recordBytes):
         # print("Next Byte Offset",nextBOffset)
         while nextBOffset > 0:
             try:
-                b = unpackBlockette(recordBytes, nextBOffset, endianChar)
+                b = unpackBlockette(recordBytes, nextBOffset, endianChar, header.dataOffset)
                 blockettes.append(b)
                 if type(b).__name__ == "Blockette1000":
                     header.encoding = b.encoding
