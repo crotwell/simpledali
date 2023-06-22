@@ -277,7 +277,7 @@ class MiniseedRecord:
             recordBytes,
             offset,
             bUnk.blocketteNum,
-            offset + len(bUnk.rawBytes),
+            bUnk.nextOffset,
         )
         recordBytes[offset + 4 : offset + len(bUnk.rawBytes) - 4] = bUnk.rawBytes[4:]
         return offset + len(bUnk.rawBytes)
