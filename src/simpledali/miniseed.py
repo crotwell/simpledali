@@ -279,7 +279,7 @@ class MiniseedRecord:
             bUnk.blocketteNum,
             bUnk.nextOffset,
         )
-        recordBytes[offset + 4 : offset + len(bUnk.rawBytes) - 4] = bUnk.rawBytes[4:]
+        recordBytes[offset + 4 : offset + len(bUnk.rawBytes)] = bUnk.rawBytes[4:]
         return offset + len(bUnk.rawBytes)
 
     def packB1000(self, recordBytes, offset, b):
