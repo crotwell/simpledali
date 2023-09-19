@@ -52,7 +52,9 @@ class Dali2Jsonl:
         self.processid = 0
         self.architecture = "python"
         if self.verbose:
-            print(f"Connect to {self.host}:{self.port}, write to {self.writePattern}")
+            print(f"Connect to {self.host}:{self.port},")
+            print(f"match {self.match}")
+            print(f" write to {self.writePattern}")
 
     @classmethod
     def from_config(cls, conf, verbose=False):
@@ -102,16 +104,19 @@ class Dali2Jsonl:
             async for daliPacket in dali.stream():
                 if self.verbose:
                     print(f"Got Dali packet: {daliPacket}")
-                if daliPacket.streamIdType == JSON_TYPE:
+                if daliPacket.streamIdType() == JSON_TYPE:
                     if self.verbose:
                         print(f"    JSON: {daliPacket.data.decode('utf-8')}")
                     self.saveToJSONL(daliPacket)
-                elif daliPacket.streamIdType == BZ2_JSON_TYPE:
+                elif daliPacket.streamIdType() == BZ2_JSON_TYPE:
                     daliPacket.data = bz2.decompress(daliPacket.data)
                     daliPacket.dSize = len(daliPacket.data)
                     if self.verbose:
                         print(f"    BZ2 JSON: {daliPacket.data.decode('utf-8')}")
                     self.saveToJSONL(daliPacket)
+                else:
+                    if self.verbose:
+                        print(f"    Not JSON packet: {daliPacket.streamIdType()}")
         except asyncio.exceptions.CancelledError:
             if self.verbose:
                 print(f"Dali task cancelled")
