@@ -4,8 +4,8 @@ import asyncio
 
 
 class SocketDataLink(DataLink):
-    def __init__(self, host, port, verbose=False):
-        super(SocketDataLink, self).__init__(verbose)
+    def __init__(self, host, port, packet_size=-1, verbose=False):
+        super(SocketDataLink, self).__init__(packet_size=packet_size, verbose=verbose)
         self.host = host
         self.port = port
         self.reader = None

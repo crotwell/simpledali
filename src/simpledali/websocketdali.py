@@ -4,8 +4,8 @@ import asyncio
 import websockets
 
 class WebSocketDataLink(DataLink):
-    def __init__(self, uri, verbose=False, ping_interval=None):
-        super(WebSocketDataLink, self).__init__(verbose)
+    def __init__(self, uri, packet_size=-1, verbose=False, ping_interval=None):
+        super(WebSocketDataLink, self).__init__(packet_size=packet_size, verbose=verbose)
         self.uri = uri
         self.ws = None
         self.ping_interval = ping_interval
