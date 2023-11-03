@@ -30,6 +30,13 @@ from .fdsnsourceid import (
     LocationSourceId,
     bandCodeForRate,
 )
+from .seedcodec import (
+    decompress,
+    CodecException,
+    UnsupportedCompressionType,
+    decodeSteim1,
+    decodeSteim2
+)
 
 __all__ = [
     DataLink,
@@ -60,4 +67,9 @@ __all__ = [
     StationSourceId,
     LocationSourceId,
     bandCodeForRate,
+    decompress,
+    CodecException,
+    UnsupportedCompressionType,
+    decodeSteim1,
+    decodeSteim2,
 ]

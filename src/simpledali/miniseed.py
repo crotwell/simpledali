@@ -4,7 +4,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 import math
 import sys
-
+from .seedcodec import decompress
 
 MICRO = 1000000
 
@@ -557,17 +557,19 @@ def unpackMiniseedRecord(recordBytes):
     return MiniseedRecord(header, data, encodedData=encodedData, blockettes=blockettes)
 
 def decompressEncodedData(encoding, byteOrder, numsamples, recordBytes):
+        needSwap = (byteOrder == BIG_ENDIAN and sys.byteorder == "little") or (
+                    byteOrder == LITTLE_ENDIAN and sys.byteorder == "big")
         if encoding == ENC_SHORT:
             data = array("h", recordBytes[ : 2 * numsamples],)
+            if needSwap:
+                data.byteswap()
         elif encoding == ENC_INT:
             data = array("i", recordBytes[ : 4 * numsamples],)
+            if needSwap:
+                data.byteswap()
         else:
-            data = None
-        if (data is not None and
-            byteOrder == BIG_ENDIAN and sys.byteorder == "little") or (
-            byteOrder == LITTLE_ENDIAN and sys.byteorder == "big"
-        ):
-            data.byteswap()
+            # byteswap handled by function
+            data = decompress(encoding, recordBytes, numsamples, byteOrder == LITTLE_ENDIAN)
         return data
 
 class MiniseedException(Exception):
