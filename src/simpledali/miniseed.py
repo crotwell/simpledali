@@ -24,6 +24,12 @@ BTime = namedtuple("BTime", "year yday hour minute second tenthMilli")
 Blockette1000 = namedtuple(
     "Blockette1000", "blocketteNum, nextOffset, encoding, byteorder, recLength"
 )
+Blockette100 = namedtuple(
+    "Blockette100", "blocketteNum, nextOffset, sampleRate"
+)
+Blockette1001 = namedtuple(
+    "Blockette1001", "blocketteNum, nextOffset, timeQuality, microseconds, frameCount"
+)
 BlocketteUnknown = namedtuple("BlocketteUnknown", "blocketteNum, nextOffset, rawBytes")
 
 
@@ -183,7 +189,11 @@ class MiniseedHeader:
             tt.tm_sec,
             int(time.microsecond / 100),
         )
-
+    def setSampleRate(self, sampleRate):
+        self.sampleRate = sampleRate
+        self.sampPeriod = timedelta(
+            microseconds=MICRO / self.sampleRate
+        )  # Nominal sample period (Sec) */
     def setStartTime(self, starttime):
         if type(starttime).__name__ == "datetime":
             # make sure timezone aware
@@ -269,8 +279,12 @@ class MiniseedRecord:
         return recordBytes
 
     def packBlockette(self, recordBytes, offset, b):
-        if type(b).__name__ == "Blockette1000":
+        if type(b).__name__ == "Blockette100":
+            return self.packB100(recordBytes, offset, b)
+        elif type(b).__name__ == "Blockette1000":
             return self.packB1000(recordBytes, offset, b)
+        elif type(b).__name__ == "Blockette1001":
+            return self.packB1001(recordBytes, offset, b)
         elif type(b).__name__ == "BlocketteUnknown":
             return self.packBlocketteUnknown(recordBytes, offset, b)
 
@@ -284,6 +298,24 @@ class MiniseedRecord:
         )
         recordBytes[offset + 4 : offset + len(bUnk.rawBytes)] = bUnk.rawBytes[4:]
         return offset + len(bUnk.rawBytes)
+
+    def packB100(self, recordBytes, offset, b):
+        struct.pack_into(
+            self.header.endianChar + "HHixxxx",
+            recordBytes,
+            offset,
+            b.blocketteNum,
+            b.nextOffset,
+            b.sampleRate,
+        )
+        return offset + 8
+
+    def createB100(self):
+        return Blockette100(
+            1000,
+            0,
+            self.header.sampleRate,
+        )
 
     def packB1000(self, recordBytes, offset, b):
         struct.pack_into(
@@ -305,6 +337,29 @@ class MiniseedRecord:
             self.header.encoding,
             self.header.byteorder,
             self.header.recordLengthExp,
+        )
+
+    def packB1001(self, recordBytes, offset, b):
+        struct.pack_into(
+            self.header.endianChar + "HHBBxB",
+            recordBytes,
+            offset,
+            b.blocketteNum,
+            b.nextOffset,
+            b.timeQuality,
+            b.microseconds,
+            b.frameCount,
+        )
+        return offset + 8
+
+    def createB1001(self):
+        microseconds = self.starttime().microsecond % 100
+        return Blockette1001(
+            1000,
+            0,
+            0, # time quality
+            microseconds, # microseconds
+            0, # frame count?
         )
 
     def packData(self, recordBytes, offset, data):
@@ -412,10 +467,22 @@ def unpackBlockette(recordBytes, offset, endianChar, dataOffset):
     #    print ("Blockette Number in unpackBlockette:", blocketteNum," ",bnum)
     if bnum == 1000:
         return unpackBlockette1000(recordBytes, offset, endianChar)
+    elif bnum == 100:
+        return unpackBlockette100(recordBytes, offset, endianChar)
+    elif bnum == 1001:
+        return unpackBlockette1001(recordBytes, offset, endianChar)
     else:
         return BlocketteUnknown(
             blocketteNum, nextOffset, recordBytes[offset:endOffset]
         )
+
+
+def unpackBlockette100(recordBytes, offset, endianChar):
+    """named Tuple of blocketteNum, nextOffset, sample rate"""
+    blocketteNum, nextOffset, sampRate = struct.unpack(
+        endianChar + "HHixxxx", recordBytes[offset : offset + 12]
+    )
+    return Blockette100(blocketteNum, nextOffset, sampRate)
 
 
 def unpackBlockette1000(recordBytes, offset, endianChar):
@@ -424,6 +491,13 @@ def unpackBlockette1000(recordBytes, offset, endianChar):
         endianChar + "HHBBBx", recordBytes[offset : offset + 8]
     )
     return Blockette1000(blocketteNum, nextOffset, encoding, byteorder, recLength)
+
+def unpackBlockette1001(recordBytes, offset, endianChar):
+    """named Tuple of blocketteNum, nextOffset, time quality, microseconds, frame count"""
+    blocketteNum, nextOffset, timeQual, microseconds, frameCount = struct.unpack(
+        endianChar + "HHBBxB", recordBytes[offset : offset + 8]
+    )
+    return Blockette1001(blocketteNum, nextOffset, timeQual, microseconds, frameCount)
 
 
 def unpackMiniseedRecord(recordBytes):
@@ -463,6 +537,10 @@ def unpackMiniseedRecord(recordBytes):
                 if type(b).__name__ == "Blockette1000":
                     header.encoding = b.encoding
                     header.byteOrder = b.byteorder
+                elif type(b).__name__ == "Blockette100":
+                    header.setSampleRate(b.sampleRate)
+                elif type(b).__name__ == "Blockette1001":
+                    header.setStartTime(header.starttime + timedelta(microseconds=b.microseconds))
                 nextBOffset = b.nextOffset
             except struct.error as e:
                 print(
