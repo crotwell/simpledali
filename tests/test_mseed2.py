@@ -47,5 +47,10 @@ class TestMseed2:
             assert data[3] == 71
             assert data[4] == 86
             assert data[5] == 89
+            assert len(data) == len(msi_data), f"d:{len(data)} should be orig:{len(msi_data)}"
             for i in range(len(msi_data)):
                     assert msi_data[i] == data[i]
+
+
+if __name__ == "__main__":
+    TestMseed2().test_read()

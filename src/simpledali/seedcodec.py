@@ -115,6 +115,7 @@ def decompress(
   numSamples: int,
   littleEndian: bool,
 ):
+
   # in case of record with no data points, ex detection blockette, which often have compression type
   # set to 0, which messes up the decompresser even though it doesn't matter since there is no data.
   if (numSamples == 0):
@@ -126,12 +127,12 @@ def decompress(
   #switch (compressionType):
   if compressionType == SHORT or compressionType == DWWSSN:
       # 16 bit values
-      if (dataView.byteLength < 2 * numSamples):
+      if (len(dataView) < 2 * numSamples):
         raise CodecException(
           "Not enough bytes for " +
             numSamples +
             " 16 bit data points, only " +
-            dataView.byteLength +
+            len(dataView) +
             " bytes.",
         )
 
@@ -143,12 +144,12 @@ def decompress(
 
   elif compressionType ==  INTEGER:
       # 32 bit integers
-      if (dataView.byteLength < 4 * numSamples):
+      if (len(dataView) < 4 * numSamples):
         raise CodecException(
           "Not enough bytes for " +
             numSamples +
             " 32 bit data points, only " +
-            dataView.byteLength +
+            len(dataView) +
             " bytes.",
         )
 
@@ -159,12 +160,12 @@ def decompress(
         offset += 4
   elif compressionType == FLOAT:
       # 32 bit floats
-      if (dataView.byteLength < 4 * numSamples):
+      if (len(dataView) < 4 * numSamples):
         raise CodecException(
           "Not enough bytes for " +
             numSamples +
             " 32 bit data points, only " +
-            dataView.byteLength +
+            len(dataView) +
             " bytes.",
         )
 
@@ -172,25 +173,21 @@ def decompress(
       out = array('f', [0]*numSamples)
 
       for i in range(numSamples):
-        out[i] = dataView.getFloat32(offset, littleEndian)
+        out[i] = getFloat32(dataView, offset, littleEndian)
         offset += 4
 
   elif compressionType == DOUBLE:
       # 64 bit doubles
-      if (dataView.byteLength < 8 * numSamples):
+      if (len(dataView) < 8 * numSamples):
         raise CodecException(
-          "Not enough bytes for " +
-            numSamples +
-            " 64 bit data points, only " +
-            dataView.byteLength +
-            " bytes.",
+          f"Not enough bytes for {numSamples} 64 bit data points, only {len(dataView)} bytes.",
         )
 
 
       out = array('d', [0]*numSamples)
 
       for i in range(numSamples):
-        out[i] = dataView.getFloat64(offset, littleEndian)
+        out[i] = getFloat64(dataView, offset, littleEndian)
         offset += 8
 
   elif compressionType == STEIM1:
@@ -204,7 +201,7 @@ def decompress(
   else:
       # unknown format????
       raise UnsupportedCompressionType(
-        "Type " + compressionType + " is not supported at this time.",
+        f"Type {compressionType} is not supported at this time, numsamples: {numSamples}.",
       )
 
   # end of switch ()
@@ -240,20 +237,16 @@ def decodeSteim1(
   # very start, bias is set to 0.
   if (len(dataView) % 64 != 0):
     raise CodecException(
-      "encoded data length is not multiple of 64 bytes (" +
-        len(dataView) +
-        ")",
+      f"encoded data length is not multiple of 64 bytes ({len(dataView)})",
     )
 
 
-  samples = array('i', [0]* (4 * numSamples))
-  tempSamples
-  numFrames = len(dataView) / 64
+  samples = array('i', [0]*numSamples)
+  numFrames = len(dataView) // 64
   current = 0
   start = 0
   firstData = 0
   lastValue = 0
-  i, j
 
   for i in range(numFrames):
     tempSamples = extractSteim1Samples(dataView, i * 64, littleEndian) # returns only differences except for frame 0
@@ -288,10 +281,7 @@ def decodeSteim1(
   # end for each frame...
   if (current != numSamples):
     raise CodecException(
-      "Number of samples decompressed doesn't match number in header: " +
-        current +
-        " != " +
-        numSamples,
+      f"Number of samples decompressed doesn't match number in header: {current} != {numSamples}",
     )
 
   # ignore last sample check???
@@ -308,6 +298,16 @@ def getInt16(dataView, offset, littleEndian):
 def getInt32(dataView, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
     vals = struct.unpack(endianChar+ "i", dataView[offset : offset + 4])
+    return vals[0]
+
+def getFloat32(dataView, offset, littleEndian):
+    endianChar = "<" if littleEndian else ">";
+    vals = struct.unpack(endianChar+ "f", dataView[offset : offset + 4])
+    return vals[0]
+
+def getFloat64(dataView, offset, littleEndian):
+    endianChar = "<" if littleEndian else ">";
+    vals = struct.unpack(endianChar+ "d", dataView[offset : offset + 8])
     return vals[0]
 
 def getUint32(dataView, offset, littleEndian):
@@ -339,14 +339,12 @@ def extractSteim1Samples(
   temp = [] # 4 samples * 16 longwords, can't be more than 64
 
   currNum = 0
-  i, n
 
   for i in range(16):
     # i is the word number of the frame starting at 0
     #currNibble = (nibbles >>> (30 - i*2 ) ) & 0x03 # count from top to bottom each nibble in W(0)
     currNibble = (nibbles >> (30 - i * 2)) & 0x03 # count from top to bottom each nibble in W(0)
 
-    #System.err.print("c(" + i + ")" + currNibble + ",")  # DEBUG
     # Rule appears to be:
     # only check for byte-swap on actual value-atoms, so a 32-bit word in of itself
     # is not swapped, but two 16-bit short *values* are or a single
@@ -359,26 +357,26 @@ def extractSteim1Samples(
         #  ("0 means header info")
         # only include header info if offset is 0
         if (offset == 0):
-          temp[currNum] = getInt32(dataView, offset+ i * 4, littleEndian)
+          temp.append(getInt32(dataView, offset+ i * 4, littleEndian))
           currNum+=1
     elif currNibble ==  1:
         #  ("1 means 4 one byte differences")
 
         endianChar = "<" if littleEndian else ">";
-        temp[currNum:currNum+4]= struct.unpack(endianChar+ "bbbb", dataView[offset + i * 4: offset+ i * 4 + 4])
+        temp += struct.unpack(endianChar+ "bbbb", dataView[offset + i * 4: offset+ i * 4 + 4])
         currNum+=4
 
     elif currNibble ==  2:
         #  ("2 means 2 two byte differences")
 
         endianChar = "<" if littleEndian else ">";
-        temp[currNum:currNum+4]= struct.unpack(endianChar+ "hh", dataView[offset + i * 4: offset+ i * 4 + 4])
+        temp += struct.unpack(endianChar+ "hh", dataView[offset + i * 4: offset+ i * 4 + 4])
         currNum+=2
 
 
     elif currNibble ==  3:
         #  ("3 means 1 four byte difference")
-        temp[currNum] = getInt32(dataView, offset + i * 4, littleEndian)
+        temp.append(getInt32(dataView, offset + i * 4, littleEndian))
         currNum+=1
 
     else:
@@ -414,13 +412,10 @@ def decodeSteim2(
 ):
   if (len(dataView) % 64 != 0):
     raise CodecException(
-      "encoded data length is not multiple of 64 bytes (" +
-        len(dataView) +
-        ")",
+      f"encoded data length is not multiple of 64 bytes ({len(dataView)})",
     )
 
-
-  samples = array('i', [0]*(4 * numSamples))
+  samples = array('i', [0]*numSamples)
 
   numFrames = len(dataView) // 64
   current = 0
@@ -429,7 +424,7 @@ def decodeSteim2(
   lastValue = 0
 
   for i in range(numFrames):
-    tempSamples = extractSteim2Samples(dataView, i * 64, littleEndian) # returns only differences except for frame 0
+    tempSamples = extractSteim2Samples(dataView, i * 64, False) # returns only differences except for frame 0
 
     firstData = 0 # d(0) is byte 0 by default
 
@@ -455,16 +450,11 @@ def decodeSteim2(
 
         lastValue = samples[current]
         current+=1
-
-
   # end for each frame...
+
   if (current != numSamples):
     raise CodecException(
-      "Number of samples decompressed doesn't match number in header: " +
-        current +
-        " != " +
-        numSamples,
-    )
+      f"Number of samples decompressed doesn't match number in header: {current} != {numSamples}")
 
 
   # ignore last sample check???
@@ -493,7 +483,7 @@ def extractSteim2Samples(
   littleEndian: bool,
 ) -> array:
   # get nibbles
-  nibbles = getUint32(dataView, offset, littleEndian)
+  nibbles = getUint32(dataView, offset, False) # steim always big endian for nibbles
   currNibble = 0
   dnib = 0
   temp = array('i', [0]*106) #max 106 = 7 samples * 15 long words + 1 nibble int
@@ -505,6 +495,10 @@ def extractSteim2Samples(
 
   headerSize = 0 # number of header/unused bits at top
 
+  headNib = (nibbles >> 30) & 0x03
+  if headNib != 0:
+      raise CodecException(f"nibble bytes must start with 00, but was {headNib:02b}")
+
   for i in range(16):
     currNibble = (nibbles >> (30 - i * 2)) & 0x03
 
@@ -513,55 +507,52 @@ def extractSteim2Samples(
         # "0 means header info"
         # only include header info if offset is 0
         if (offset == 0):
-            temp[currNum] = getInt32(dataView, offset + i * 4, littleEndian)
+            temp[currNum] = getInt32(dataView, offset + i * 4, False)
             currNum+=1
 
     elif  currNibble ==  1:
-        #  "1 means 4 one byte differences " +currNum+" "+dataView.getInt8(offset+(i*4))+" "+dataView.getInt8(offset+(i*4)+1)+" "+dataView.getInt8(offset+(i*4)+2)+" "+dataView.getInt8(offset+(i*4)+3)
 
         endianChar = "<" if littleEndian else ">";
         vals = struct.unpack(endianChar+ "bbbb", dataView[offset + i * 4: offset+ i * 4 + 4])
+        # print(f"1 means 4 one byte differences {currNum} {vals}")
         for k in range(4):
             temp[currNum+k] = vals[k]
         currNum+=4
 
     elif  currNibble == 2:
-        tempInt = getUint32(dataView, offset + i * 4, littleEndian)
+        tempInt = getUint32(dataView, offset + i * 4, False)
         dnib = (tempInt >> 30) & 0x03
 
         #switch (dnib):
         if dnib == 1:
-            # "2,1 means 1 thirty bit difference"
-            val = ((tempInt << 2) & 0xFFFFFFFF ) >> 2
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            print(f"diff {temp[currNum]} from {val} as {currNibble}/{dnib}")
-            currNum+=1
+            headerSize = 2
+            diffCount = 1
+            bitSize = 30
+            dnibVals = extractDnibValues(tempInt, headerSize, diffCount, bitSize)
+            temp[currNum] = dnibVals[0]
+            currNum+=diffCount
+            # print(f"2,1 means 1 thirty bit difference {dnibVals}")
 
         elif dnib == 2:
-            # "2,2 means 2 fifteen bit differences"
-            val = ((tempInt << 2) & 0xFFFFFFFF) >> 17 # d0
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            print(f"diff {temp[currNum]} from {val} as {currNibble}/{dnib}")
-            currNum+=1
-
-            val = ((tempInt << 17) & 0xFFFFFFFF) >> 17 # d1
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            print(f"diff {temp[currNum]} from {val} as {currNibble}/{dnib}")
-            currNum+=1
+            headerSize = 2
+            diffCount = 2
+            bitSize = 15
+            dnibVals = extractDnibValues(tempInt, headerSize, diffCount, bitSize)
+            temp[currNum] = dnibVals[0]
+            temp[currNum+1] = dnibVals[1]
+            currNum+=diffCount
+            # print(f"2,2 means 2 fifteen bit differences {dnibVals}")
 
         elif dnib == 3:
-            #  "2,3 means 3 ten bit differences"
-            val = ((tempInt << 2) & 0xFFFFFFFF) >> 22 # d0
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            currNum+=1
-
-            val = ((tempInt << 12) & 0xFFFFFFFF) >> 22 # d1
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            currNum+=1
-
-            val = ((tempInt << 22) & 0xFFFFFFFF) >> 22 # d2
-            temp[currNum] = val - (1<<32) if val >= (1<<31) else val
-            currNum+=1
+            headerSize = 2
+            diffCount = 3
+            bitSize = 10
+            dnibVals = extractDnibValues(tempInt, headerSize, diffCount, bitSize)
+            temp[currNum] = dnibVals[0]
+            temp[currNum+1] = dnibVals[1]
+            temp[currNum+2] = dnibVals[2]
+            currNum+=diffCount
+            # print(f"2,3 means 3 ten bit differences {tempInt:032b} {dnibVals}")
 
         else:
             raise CodecException(
@@ -570,43 +561,40 @@ def extractSteim2Samples(
 
 
     elif  currNibble == 3:
-        tempInt = getUint32(dataView, offset + i * 4, littleEndian)
+        tempInt = getUint32(dataView, offset + i * 4, False)
         dnib = (tempInt >> 30) & 0x03
         # for case 3, we are going to use a for-loop formulation that
         # accomplishes the same thing as case 2, just less verbose.
         diffCount = 0 # number of differences
-
         bitSize = 0 # bit size
-
         headerSize = 0 # number of header/unused bits at top
 
         #switch (dnib):
         if dnib == 0:
-            #  ("3,0 means 5 six bit differences")
+            # print(f"3,0 means 5 six bit differences: {tempInt:032b}")
             headerSize = 2
             diffCount = 5
             bitSize = 6
 
         elif dnib == 1:
-            #  ("3,1 means 6 five bit differences")
+            # print(f"3,1 means 6 five bit differences")
             headerSize = 2
             diffCount = 6
             bitSize = 5
 
         elif dnib == 2:
-            #  ("3,2 means 7 four bit differences, with 2 unused bits")
+            # print(f"3,2 means 7 four bit differences, with 2 unused bits")
             headerSize = 4
             diffCount = 7
             bitSize = 4
 
         else:
             raise CodecException(
-              f"Steim2 Unknown case currNibble={currNibble} dnib={dnib} for chunk {i} offset {offset}, nibbles: {nibbles}",
+              f"Steim2 Unknown case currNibble={currNibble} dnib={dnib} for chunk {i} offset {offset}, nibbles: {nibbles:032b} int:{tempInt:032b}",
             )
 
 
         if (diffCount > 0):
-          bitStr = format(tempInt, '#032b')
           for d in range(diffCount):
             # for-loop formulation
             val = (tempInt << (headerSize + d * bitSize)) & 0xFFFFFFFF
@@ -620,3 +608,13 @@ def extractSteim2Samples(
 
 
   return temp[0:currNum]
+
+def extractDnibValues(tempInt, headerSize, diffCount, bitSize):
+    out = [0]*diffCount
+    if (diffCount > 0):
+      for d in range(diffCount):
+        # for-loop formulation
+        val = (tempInt << (headerSize + d * bitSize)) & 0xFFFFFFFF
+        val = val - (1<<32) if val >= (1<<31) else val
+        out[d] = val >>  ((diffCount - 1) * bitSize + headerSize)
+    return out

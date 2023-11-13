@@ -22,6 +22,13 @@ from .miniseed import (
     unpackBlockette,
     MiniseedException,
 )
+from .mseed3 import (
+    unpackMSeed3Record,
+    unpackMSeed3Header,
+    MSeed3Header,
+    Mseed3Record,
+
+)
 from .dali2jsonl import Dali2Jsonl
 from .fdsnsourceid import (
     FDSNSourceId,
