@@ -17,9 +17,11 @@ def hptimeToDatetime(hptime):
 def utcnowWithTz():
     return datetime.now(timezone.utc)
 
+def isowithz(dt):
+    return dt.isoformat().replace('+00:00', 'Z')
 
 def hptimeAsIso(hptime):
-    return hptimeToDatetime(hptime).isoformat()
+    return isowithz(hptimeToDatetime(hptime).isoformat())
 
 
 def optional_date(date_str):
@@ -40,9 +42,62 @@ def optional_date(date_str):
             print(f"Can't parse date: {date_str}")
             return date_str
 
+INFO_VERSION = "Version"
+INFO_SERVERID = "ServerID"
+INFO_CAPABILITIES = "Capabilities"
+INFO_STATUS = "Status"
+INFO_STREAMLIST= "StreamList"
+INFO_STREAM= "Stream"
+def prettyPrintInfo(info):
+    out = ""
+    if INFO_VERSION in info:
+        out += f"  Version: {info[INFO_VERSION]}\n"
+    if INFO_SERVERID in info:
+        out += f"  ServerID: {info[INFO_SERVERID]}\n"
+    if INFO_CAPABILITIES in info:
+        out += f"  Capabilities: {info[INFO_CAPABILITIES]}\n"
+    if INFO_STATUS in info:
+        status = info[INFO_STATUS]
+        out += f"  Status:\n"
+        out += f"    StartTime: {isowithz(status['StartTime'])}\n"
+        out += f"    RingVersion: {status['RingVersion']}\n"
+        out += f"    RingSize: {status['RingSize']}\n"
+        out += f"    PacketSize: {status['PacketSize']}\n"
+        out += f"    MaximumPacketID: {status['MaximumPacketID']}\n"
+        out += f"    MaximumPackets: {status['MaximumPackets']}\n"
+        out += f"    MemoryMappedRing: {status['MemoryMappedRing']}\n"
+        out += f"    VolatileRing: {status['VolatileRing']}\n"
+        out += f"    TotalConnections: {status['TotalConnections']}\n"
+        out += f"    TotalStreams: {status['TotalStreams']}\n"
+        out += f"    TXPacketRate: {status['TXPacketRate']}\n"
+        out += f"    TXByteRate: {status['TXByteRate']}\n"
+        out += f"    RXPacketRate: {status['RXPacketRate']}\n"
+        out += f"    RXByteRate: {status['RXByteRate']}\n"
+        out += f"    EarliestPacketID: {status['EarliestPacketID']}\n"
+        out += f"    EarliestPacketCreationTime: {isowithz(status['EarliestPacketCreationTime'])}\n"
+        out += f"    EarliestPacketDataStartTime: {isowithz(status['EarliestPacketDataStartTime'])}\n"
+        out += f"    EarliestPacketDataEndTime: {isowithz(status['EarliestPacketDataEndTime'])}\n"
+        out += f"    LatestPacketID: {status['LatestPacketID']}\n"
+        out += f"    LatestPacketCreationTime: {isowithz(status['LatestPacketCreationTime'])}\n"
+        out += f"    LatestPacketDataStartTime: {isowithz(status['LatestPacketDataStartTime'])}\n"
+        out += f"    LatestPacketDataEndTime: {isowithz(status['LatestPacketDataEndTime'])}\n"
+    if INFO_STREAMLIST in info:
+        streaminfo = info[INFO_STREAMLIST]
+        out += f"  Streams:\n"
+        out += f"    TotalStreams: {streaminfo['TotalStreams']}\n"
+        out += f"    SelectedStreams: {streaminfo['SelectedStreams']}\n"
+        streamlist = streaminfo[INFO_STREAM]
+        for st in streamlist:
+            out += f"    {st['Name']} latency: {st['DataLatency']}\n"
+            out += f"      {st['EarliestPacketID']}  {isowithz(st['EarliestPacketDataStartTime'])}  {isowithz(st['EarliestPacketDataEndTime'])}\n"
+            out += f"      {st['LatestPacketID']}  {isowithz(st['LatestPacketDataStartTime'])}  {isowithz(st['LatestPacketDataEndTime'])}\n"
+    return out
+
 
 def encodeAuthToken(user_id, expireDelta, writePattern, secretKey):
     """
+    Note token auth is not part of ringserver proper, uses a fork I created.
+
     Generates a ringserver Auth Token
     user_id: user name
     expireDelta: lifetime of token, ex timedelta(days=1, seconds=60)
@@ -61,9 +116,15 @@ def encodeAuthToken(user_id, expireDelta, writePattern, secretKey):
 
 
 def decodeAuthToken(encodedToken, secretKey):
+    """
+    Note token auth is not part of ringserver proper, uses a fork I created.
+    """
     return jwt.decode(encodedToken, secretKey, algotithms="HS256")
 
 
 def timeUntilExpireToken(token):
+    """
+    Note token auth is not part of ringserver proper, uses a fork I created.
+    """
     payload = jwt.decode(token, verify=False)
     return datetime.fromtimestamp(payload["exp"], timezone.utc) - utcnowWithTz()
