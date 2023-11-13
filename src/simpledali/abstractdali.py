@@ -223,12 +223,20 @@ class DataLink(ABC):
         r = await self.writeCommand(header, None)
         return r
 
+    async def positionSet(self, packetId, packetTime=None):
+        if packetTime is None:
+            hpdatastart = ""
+        else:
+            hpdatastart = int(packetTime.timestamp() * MICROS)
+        r = await self.writeCommand(f"POSITION SET {packetId} {hpdatastart}", None)
+        return r
+
     async def positionEarliest(self):
-        r = await self.writeCommand("POSITION SET EARLIEST", None)
+        r = await self.positionSet("EARLIEST")
         return r
 
     async def positionLatest(self):
-        r = await self.writeCommand("POSITION SET LATEST", None)
+        r = await self.positionSet("LATEST")
         return r
 
     async def positionAfter(self, time):
