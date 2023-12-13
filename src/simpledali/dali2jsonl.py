@@ -33,6 +33,7 @@ class Dali2Jsonl:
         self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, websocketurl=None, verbose=False
     ):
         self.checkPattern(writePattern)
+        self.do_earliest = False
         self.match = match
         self.writePattern = writePattern
         self.websocketurl = websocketurl
@@ -92,6 +93,8 @@ class Dali2Jsonl:
             print(f"Id: {serverId}")
 
         await dali.match(self.match)
+        if self.do_earliest:
+            await dali.positionEarliest()
         await self.stream_data(dali)
 
         if self.verbose:
@@ -143,6 +146,8 @@ class Dali2Jsonl:
         outfile.parent.mkdir(parents=True, exist_ok=True)
         with open(outfile, "a") as out:
             out.write(daliPacket.data.decode("utf-8") + "\n")
+            if self.verbose:
+                print(f"   write to {outfile}")
 
     def fileFromPattern(self, net, sta, loc, chan, time):
         outfile = self.fillBasePattern(net, sta, loc, chan)
@@ -239,6 +244,9 @@ def do_parseargs():
         help="Configuration as TOML",
         type=argparse.FileType("rb"),
     )
+    parser.add_argument(
+        "--earliest", help="start at earliest packet in server", action="store_true"
+    )
     return parser.parse_args()
 
 
@@ -249,6 +257,8 @@ def main():
     conf = tomllib.load(args.conf)
     args.conf.close()
     c = Dali2Jsonl.from_config(conf, verbose=args.verbose)
+    if args.earliest:
+        c.do_earliest = True
     try:
         debug = False
         asyncio.run(c.run())
