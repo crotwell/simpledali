@@ -119,7 +119,7 @@ def decompress(
   # in case of record with no data points, ex detection blockette, which often have compression type
   # set to 0, which messes up the decompresser even though it doesn't matter since there is no data.
   if (numSamples == 0):
-    return array('i', [0])
+    return array('i', [])
 
   out = None
   offset = 0
