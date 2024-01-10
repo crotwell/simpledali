@@ -151,11 +151,7 @@ def decompress(
       # 16 bit values
       if (len(dataView) < 2 * numSamples):
         raise CodecException(
-          "Not enough bytes for " +
-            numSamples +
-            " 16 bit data points, only " +
-            len(dataView) +
-            " bytes.",
+          f"Not enough bytes for {numSamples} 16 bit data points, only {len(dataView)} bytes.",
         )
 
       out = array('i', [0]*numSamples)
@@ -168,14 +164,10 @@ def decompress(
       # 32 bit integers
       if (len(dataView) < 4 * numSamples):
         raise CodecException(
-          "Not enough bytes for " +
-            numSamples +
-            " 32 bit data points, only " +
-            len(dataView) +
-            " bytes.",
+          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataView)} bytes.",
         )
 
-      out = array('i', [0]*numSamples)
+      out = array('l', [0]*numSamples)
 
       for i in range(numSamples):
         out[i] = getInt32(dataView, offset, littleEndian)
@@ -184,11 +176,7 @@ def decompress(
       # 32 bit floats
       if (len(dataView) < 4 * numSamples):
         raise CodecException(
-          "Not enough bytes for " +
-            numSamples +
-            " 32 bit data points, only " +
-            len(dataView) +
-            " bytes.",
+          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataView)} bytes.",
         )
 
 
