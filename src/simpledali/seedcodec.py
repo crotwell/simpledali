@@ -307,7 +307,7 @@ def getInt16(dataView, offset, littleEndian):
 
 def getInt32(dataView, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "i", dataView[offset : offset + 4])
+    vals = struct.unpack(endianChar+ "l", dataView[offset : offset + 4])
     return vals[0]
 
 def getFloat32(dataView, offset, littleEndian):
