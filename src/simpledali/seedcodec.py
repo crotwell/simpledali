@@ -93,6 +93,28 @@ class EncodedDataSegment:
       self.littleEndian,
     )
 
+def compress(compressionType, values):
+    littleEndian = True
+    if compressionType ==  INTEGER:
+        # 32 bit integers
+        compCode = 'l'
+    elif compressionType ==  SHORT:
+        # 16 bit integers
+        compCode = 'h'
+    elif compressionType ==  FLOAT32:
+        # 32 bit float
+        compCode = 'f'
+    elif compressionType ==  FLOAT64:
+        # 64 bit float/double
+        compCode = 'd'
+    else:
+        raise UnsupportedCompressionType(f"type {compressionType} not yet supported for compression")
+    dataView = struct.pack(f"<{len(values)}{compCode}", *values)
+
+    return EncodedDataSegment(compressionType,
+                                dataView,
+                                len(values),
+                                littleEndian)
 
 #
 #  Decompress the samples from the provided DataView and
