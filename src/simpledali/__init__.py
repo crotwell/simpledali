@@ -38,6 +38,7 @@ from .fdsnsourceid import (
     bandCodeForRate,
 )
 from .seedcodec import (
+    compress,
     decompress,
     CodecException,
     UnsupportedCompressionType,
@@ -74,6 +75,7 @@ __all__ = [
     StationSourceId,
     LocationSourceId,
     bandCodeForRate,
+    compress,
     decompress,
     CodecException,
     UnsupportedCompressionType,

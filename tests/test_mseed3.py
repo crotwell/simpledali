@@ -3,7 +3,6 @@ import json
 import os
 import simpledali
 from datetime import datetime
-
 from pathlib import Path
 
 TEST_DIR =  Path(__file__).parent
@@ -86,6 +85,23 @@ class TestMseed3:
                         assert len(jsondata) == len(data)
                         for i in range(len(jsondata)):
                             assert jsondata[i] == data[i], f"{i}  {jsondata[i]} != {data[i]}"
+
+
+    def test_roundtrip(self):
+        values = [3, 1, -1, 2000]
+        header = simpledali.MSeed3Header()
+        header.encoding = simpledali.seedcodec.INTEGER
+        header.sampleRatePeriod = -1
+        header.numSamples = len(values)
+        encodedData = simpledali.compress(header.encoding, values).dataView
+        header.dataLength = len(encodedData)
+        record = simpledali.Mseed3Record(header, encodedData)
+        recordBytes = record.pack()
+        outRecord = simpledali.unpackMSeed3Record(recordBytes)
+        decomp_data = outRecord.decompress()
+        assert len(decomp_data) == len(values)
+        for i in range(len(decomp_data)):
+            assert decomp_data[i] == values[i], f"{i} msi:{decomp_data[i]} != {values[i]} "
 
 
 if __name__ == "__main__":
