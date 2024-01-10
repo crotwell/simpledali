@@ -55,6 +55,18 @@ def processRecord(rec):
     print(f" orig: type={rec.header.encoding} {rec.header.dataLength} bytes ->  {len(compressed['encoded'])} gorilla bytes for {len(data)} points")
 
 
+
+def processRecordFloat(rec):
+    data = rec.decompress()
+    gain = 5.0431188410000354E8
+    gain_data = list(map(lambda x: x/gain, data))
+    compressed = gc.ValuesEncoder.encode_all(gain_data, float_format='f32')
+    re_decomp = gc.ValuesDecoder.decode_all(compressed)
+    if len(data)  != len(re_decomp):
+        print(f" recomp not same length: {len(data)}  != {len(re_decomp)}")
+    print(f" orig: type={rec.header.encoding} {rec.header.dataLength}, {4*len(data)} float bytes ->  {len(compressed['encoded'])} gorilla bytes for {len(data)} points")
+
+
 def main():
     args = do_parseargs()
     rec = None
@@ -67,6 +79,7 @@ def main():
             offset += rec.header.recordSize()
             rec = simpledali.mseed3.unpackMSeed3Record(rec_bytes[offset:])
             processRecord(rec)
+            #processRecordFloat(rec)
             recNum += 1
     return 0
 
