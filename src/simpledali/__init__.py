@@ -40,12 +40,13 @@ from .fdsnsourceid import (
 from .seedcodec import (
     compress,
     decompress,
-    CodecException,
-    UnsupportedCompressionType,
     decodeSteim1,
     decodeSteim2
 )
-
+from .exception import (
+    CodecException,
+    UnsupportedCompressionType,
+)
 __all__ = [
     DataLink,
     DaliResponse,

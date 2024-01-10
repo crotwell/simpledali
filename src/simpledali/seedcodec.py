@@ -11,6 +11,11 @@ from array import array
 import sys
 import struct
 
+from .exception import (
+    CodecException,
+    UnsupportedCompressionType,
+)
+
 # ascii
 ASCII: int = 0
 
@@ -43,19 +48,6 @@ SRO: int = 30
 
 # DWWSSN 16 bit
 DWWSSN: int = 32
-
-class CodecException(Exception):
-  def __init__(self, message):
-    super().__init__(message)
-    self.message = message
-    self.name = "CodecException"
-
-
-class UnsupportedCompressionType(Exception):
-  def __init__(self, message):
-    super().__init__(message)
-    self.message = message
-    self.name = "UnsupportedCompressionType"
 
 def isFloatCompression(compressionType: int) -> bool:
   if (compressionType == FLOAT or compressionType == DOUBLE):
