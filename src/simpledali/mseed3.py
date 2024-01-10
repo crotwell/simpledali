@@ -2,6 +2,7 @@ import struct
 from array import array
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
+import json
 import math
 import sys
 
@@ -86,10 +87,12 @@ class MSeed3Header:
 
     def pack(self):
         header = bytearray(FIXED_HEADER_SIZE)
+        OFFSET=0
         struct.pack_into(
             HEADER_PACK_FORMAT,
             header,
-            'M', 'S', 3,
+            OFFSET,
+            b'M', b'S', 3,
             self.flags,
             self.nanosecond,
             self.year,
@@ -166,6 +169,11 @@ class Mseed3Record:
         return unpackMiniseedRecord(self.pack())
 
     def pack(self):
+        # json to string
+        extraHeadersStr = json.dumps(self.header.extraHeaders)
+        # string to bytes
+        extraHeadersBytes = extraHeadersStr.encode("UTF-8")
+        self.header.extraHeadersLength = len(extraHeadersBytes)
         rec_size = FIXED_HEADER_SIZE+self.header.identifierLength+self.header.extraHeadersLength+self.header.dataLength
 
         recordBytes = bytearray(self.header.recordSize())
@@ -173,7 +181,7 @@ class Mseed3Record:
         offset = FIXED_HEADER_SIZE
         recordBytes[offset:offset+self.header.identifierLength] = self.header.identifier.encode("UTF-8")
         offset += self.header.identifierLength
-        recordBytes[offset:offset+self.header.extraHeadersLength] = self.header.extraHeaders.encode("UTF-8")
+        recordBytes[offset:offset+self.header.extraHeadersLength] = extraHeadersBytes
         offset += self.header.extraHeadersLength
         recordBytes[offset:offset+self.header.dataLength] = self.encodedData
         return recordBytes
@@ -228,6 +236,7 @@ def decompressEncodedData(encoding, numsamples, recordBytes):
         byteOrder = BIG_ENDIAN
     needSwap = (byteOrder == BIG_ENDIAN and sys.byteorder == "little") or (
                 byteOrder == LITTLE_ENDIAN and sys.byteorder == "big")
+
 
     data = decompress(encoding, recordBytes, numsamples, byteOrder == LITTLE_ENDIAN)
     return data
