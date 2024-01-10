@@ -11,6 +11,9 @@ from array import array
 import sys
 import struct
 
+from .gorilla import isGorilla
+from .gorilla import decompressGorilla
+
 from .exception import (
     CodecException,
     UnsupportedCompressionType,
@@ -139,7 +142,9 @@ def decompress(
   offset = 0
 
   #switch (compressionType):
-  if compressionType == SHORT or compressionType == DWWSSN:
+  if isGorilla(compressionType):
+      return decompressGorilla(compressionType, dataView, numSamples)
+  elif compressionType == SHORT or compressionType == DWWSSN:
       # 16 bit values
       if (len(dataView) < 2 * numSamples):
         raise CodecException(

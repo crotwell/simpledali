@@ -47,6 +47,10 @@ from .exception import (
     CodecException,
     UnsupportedCompressionType,
 )
+from .gorilla import (
+    isGorilla,
+    decompressGorilla,
+)
 __all__ = [
     DataLink,
     DaliResponse,
@@ -82,4 +86,6 @@ __all__ = [
     UnsupportedCompressionType,
     decodeSteim1,
     decodeSteim2,
+    isGorilla,
+    decompressGorilla,
 ]
