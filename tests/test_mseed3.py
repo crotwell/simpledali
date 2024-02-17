@@ -76,7 +76,7 @@ class TestMseed3:
                         jsonrec = json.load(injson)[0]
                         assert jsonrec["FormatVersion"] == rec.header.formatVersion
                         assert jsonrec["EncodingFormat"] == rec.header.encoding
-                        assert jsonrec["SampleRate"] == rec.header.sampleRate(), f"{jsonrec['SampleRate']} != {rec.header.sampleRate()}"
+                        assert jsonrec["SampleRate"] == rec.header.sampleRate, f"{jsonrec['SampleRate']} != {rec.header.sampleRate}"
                         assert jsonrec["SampleCount"] == rec.header.numSamples
                         assert jsonrec["CRC"] == rec.header.crcAsHex(), f"{jsonrec['CRC']} {rec.header.crcAsHex()}"
                         assert jsonrec["PublicationVersion"] == rec.header.publicationVersion

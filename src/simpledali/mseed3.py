@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import math
 import sys
+import crc32c
 
 from .miniseed import MiniseedException
 from .seedcodec import decompress, STEIM1, STEIM2
@@ -55,7 +56,7 @@ class MSeed3Header:
     identifierLength: int;
     extraHeadersLength: int;
     identifier: str;
-    extraHeaders: str;
+    extraHeadersStr: str;
     dataLength: int;
     def __init__(self):
         # empty construction
@@ -77,13 +78,17 @@ class MSeed3Header:
         self.identifierLength = 0;
         self.extraHeadersLength = 2;
         self.identifier = "";
-        self.extraHeaders = {};
+        self.extraHeadersStr = "{}";
         self.dataLength = 0;
 
     def crcAsHex(self):
         return "0x{:08X}".format(self.crc)
+    @property
     def sampleRate(self):
-        return self.sampleRatePeriod if self.sampleRatePeriod > 0 else -1/self.sampleRatePeriod
+        return self.sampleRatePeriod if self.sampleRatePeriod > 0 else -1.0/self.sampleRatePeriod
+    @property
+    def samplePeriod(self):
+        return -1*self.sampleRatePeriod if self.sampleRatePeriod < 0 else 1.0/self.sampleRatePeriod
 
     def pack(self):
         header = bytearray(FIXED_HEADER_SIZE)
@@ -116,36 +121,43 @@ class MSeed3Header:
 
     @property
     def starttime(self):
-        st = datetime.datetime(self.year, 1, 1,
-                               hour=self.hour, minute=self.minute,second=self.second,
-                               microsecond=self.nanosecond/1000,
-                               tzinfo=timezone.utc)
-        doy = datetime.timedelta(days=self.dayofyear)
+        st = datetime(self.year, 1, 1,
+                       hour=self.hour, minute=self.minute,second=self.second,
+                       microsecond=int(self.nanosecond/1000),
+                       tzinfo=timezone.utc)
+        doy = timedelta(days=self.dayOfYear)
         return st+doy
 
 
     @starttime.setter
     def starttime(self, stime):
+        dt = None
         if type(stime).__name__ == "datetime":
-            # make sure timezone aware
-            st = None
-            if not stime.tzinfo:
-                st = stime.replace(tzinfo=timezone.utc)
-            else:
-                st = stime.astimezone(timezone.utc)
-            tt = st.timetuple()
-            self.year = tt.tm_year
-            self.dayOfYear = tt.tm_yday
-            self.hour = tt.tm_hour
-            self.minute = tt.tm_min
-            self.second = tt.tm_sec
-            self.nanosecond = st.microsecond * 1000
-
+            dt = stime
         elif type(stime).__name__ == "str":
             fixTZ = stime.replace("Z", "+00:00")
-            self.setStartTime(datetime.fromisoformat(fixTZ))
+            dt = datetime.fromisoformat(fixTZ)
         else:
             raise MiniseedException(f"unknown type of starttime {type(stime)}")
+
+        # make sure timezone aware
+        st = None
+        if not dt.tzinfo:
+            st = dt.replace(tzinfo=timezone.utc)
+        else:
+            st = dt.astimezone(timezone.utc)
+        tt = st.timetuple()
+        self.year = tt.tm_year
+        self.dayOfYear = tt.tm_yday
+        self.hour = tt.tm_hour
+        self.minute = tt.tm_min
+        self.second = tt.tm_sec
+        self.nanosecond = st.microsecond * 1000
+
+    @property
+    def endtime(self):
+        return self.starttime + timedelta(seconds=self.samplePeriod * (self.numSamples - 1))
+
 
 
 class Mseed3Record:
@@ -159,35 +171,43 @@ class Mseed3Record:
             data = decompressEncodedData(self.header.encoding, self.header.numSamples, self.encodedData)
         return data
 
+    @property
     def starttime(self):
         return self.header.starttime
 
+    @property
     def endtime(self):
-        return self.starttime + self.header.sampPeriod * (self.header.numSamples - 1)
+        return self.header.endtime
 
     def clone(self):
         return unpackMiniseedRecord(self.pack())
 
     def pack(self):
-        # json to string
-        extraHeadersStr = json.dumps(self.header.extraHeaders)
+        self.header.crc = 0
         # string to bytes
-        extraHeadersBytes = extraHeadersStr.encode("UTF-8")
+        identifierBytes = self.header.identifier.encode("UTF-8")
+        self.header.identifierLength = len(identifierBytes)
+        extraHeadersBytes = self.header.extraHeadersStr.encode("UTF-8")
         self.header.extraHeadersLength = len(extraHeadersBytes)
+        self.header.dataLength = len(self.encodedData)
         rec_size = FIXED_HEADER_SIZE+self.header.identifierLength+self.header.extraHeadersLength+self.header.dataLength
 
-        recordBytes = bytearray(self.header.recordSize())
+        recordBytes = bytearray(rec_size)
         recordBytes[0:FIXED_HEADER_SIZE] = self.header.pack()
         offset = FIXED_HEADER_SIZE
-        recordBytes[offset:offset+self.header.identifierLength] = self.header.identifier.encode("UTF-8")
+        recordBytes[offset:offset+self.header.identifierLength] = identifierBytes
         offset += self.header.identifierLength
         recordBytes[offset:offset+self.header.extraHeadersLength] = extraHeadersBytes
         offset += self.header.extraHeadersLength
         recordBytes[offset:offset+self.header.dataLength] = self.encodedData
+
+        struct.pack_into("<I", recordBytes, CRC_OFFSET, 0);
+        crc = crc32c.crc32c(recordBytes)
+        struct.pack_into("<I", recordBytes, CRC_OFFSET, crc);
         return recordBytes
 
     def __str__(self):
-        return f"{self.header.identifier} {self.starttime()} {self.endtime()}"
+        return f"{self.header.identifier} {self.header.starttime} {self.header.endtime}"
 
 
 def unpackMSeed3Header(recordBytes, endianChar=">"):
@@ -219,14 +239,20 @@ def unpackMSeed3Header(recordBytes, endianChar=">"):
     offset = FIXED_HEADER_SIZE
     ms3header.identifier = recordBytes[offset:offset+ms3header.identifierLength].decode("utf-8")
     offset += ms3header.identifierLength
-    ms3header.extraHeaders = recordBytes[offset:offset+ms3header.extraHeadersLength].decode("utf-8")
+    print(f"unpack eh len: {ms3header.extraHeadersLength}")
+    ms3header.extraHeadersStr = recordBytes[offset:offset+ms3header.extraHeadersLength].decode("utf-8")
     offset += ms3header.extraHeadersLength
     return ms3header
 
-def unpackMSeed3Record(recordBytes):
+def unpackMSeed3Record(recordBytes, check_crc=True):
     ms3header = unpackMSeed3Header(recordBytes)
     offset = FIXED_HEADER_SIZE  + ms3header.identifierLength + ms3header.extraHeadersLength
     encodedData = recordBytes[offset:offset+ms3header.dataLength]
+    tempBytes = bytearray(recordBytes)
+    struct.pack_into("<I", tempBytes, CRC_OFFSET, 0);
+    crc = crc32c.crc32c(tempBytes)
+    if check_crc and ms3header.crc != crc:
+        raise MiniseedException(f"crc fail:  Calc: {crc}  Header: {ms3header.crc}")
     return Mseed3Record(ms3header, encodedData=encodedData )
 
 
@@ -240,3 +266,6 @@ def decompressEncodedData(encoding, numsamples, recordBytes):
 
     data = decompress(encoding, recordBytes, numsamples, byteOrder == LITTLE_ENDIAN)
     return data
+
+def crcAsHex(crc):
+    return "0x{:08X}".format(crc)
