@@ -161,9 +161,26 @@ class MSeed3Header:
 
 
 class Mseed3Record:
-    def __init__(self, header, encodedData):
+    def __init__(self, header, identifier, encodedData, extraHeaders=None):
         self.header = header
+        self._eh = extraHeaders
+        self.identifier = identifier
         self.encodedData=encodedData
+
+    @property
+    def eh(self):
+        if self._eh is not None and isinstance(self._eh, str):
+            self._eh = json.loads(self._eh)
+        return self._eh
+
+    @eh.setter
+    def eh(self, ehDict):
+        self._eh = ehDict
+
+    @eh.deleter
+    def eh(self):
+        del self._eh
+
 
     def decompress(self):
         data = None
@@ -187,7 +204,11 @@ class Mseed3Record:
         # string to bytes
         identifierBytes = self.header.identifier.encode("UTF-8")
         self.header.identifierLength = len(identifierBytes)
-        extraHeadersBytes = self.header.extraHeadersStr.encode("UTF-8")
+        if self._eh is not None and isinstance(self._eh, dict):
+            extraHeadersStr = json.dumps(self._eh)
+        elif self._eh is not None and isinstance(self._eh, str):
+            extraHeadersStr = self._eh
+        extraHeadersBytes = extraHeadersStr.encode("UTF-8")
         self.header.extraHeadersLength = len(extraHeadersBytes)
         self.header.dataLength = len(self.encodedData)
         rec_size = FIXED_HEADER_SIZE+self.header.identifierLength+self.header.extraHeadersLength+self.header.dataLength
@@ -207,10 +228,9 @@ class Mseed3Record:
         return recordBytes
 
     def __str__(self):
-        return f"{self.header.identifier} {self.header.starttime} {self.header.endtime}"
+        return f"{self.identifier} {self.header.starttime} {self.header.endtime}"
 
-
-def unpackMSeed3Header(recordBytes, endianChar=">"):
+def unpackMSeed3FixedHeader(recordBytes):
     if len(recordBytes) < FIXED_HEADER_SIZE:
         raise MiniseedException("Not enough bytes for header: {:d}".format(len(recordBytes)))
     ms3header = MSeed3Header()
@@ -236,24 +256,59 @@ def unpackMSeed3Header(recordBytes, endianChar=">"):
     ) = struct.unpack(HEADER_PACK_FORMAT, recordBytes[0:FIXED_HEADER_SIZE])
     if recordIndicatorM != b'M' or recordIndicatorS != b'S':
         raise MiniseedException(f"expected record start to be MS but was {recordIndicatorM}{recordIndicatorS}")
-    offset = FIXED_HEADER_SIZE
-    ms3header.identifier = recordBytes[offset:offset+ms3header.identifierLength].decode("utf-8")
-    offset += ms3header.identifierLength
-    print(f"unpack eh len: {ms3header.extraHeadersLength}")
-    ms3header.extraHeadersStr = recordBytes[offset:offset+ms3header.extraHeadersLength].decode("utf-8")
-    offset += ms3header.extraHeadersLength
     return ms3header
 
 def unpackMSeed3Record(recordBytes, check_crc=True):
-    ms3header = unpackMSeed3Header(recordBytes)
-    offset = FIXED_HEADER_SIZE  + ms3header.identifierLength + ms3header.extraHeadersLength
+    crc = 0
+    ms3header = unpackMSeed3FixedHeader(recordBytes)
+    if check_crc:
+        tempBytes = bytearray(recordBytes[:FIXED_HEADER_SIZE])
+        struct.pack_into("<I", tempBytes, CRC_OFFSET, 0);
+        crc = crc32c.crc32c(tempBytes)
+    offset = FIXED_HEADER_SIZE
+    idBytes = recordBytes[offset:offset+ms3header.identifierLength]
+    if check_crc:
+        crc = crc32c.crc32c(idBytes, crc)
+    identifier = idBytes.decode("utf-8")
+    offset += ms3header.identifierLength
+    print(f"unpack eh len: {ms3header.extraHeadersLength}")
+    ehBytes = recordBytes[offset:offset+ms3header.extraHeadersLength]
+    if check_crc:
+        crc = crc32c.crc32c(ehBytes, crc)
+    extraHeadersStr = ehBytes.decode("utf-8")
+    offset += ms3header.extraHeadersLength
+
     encodedData = recordBytes[offset:offset+ms3header.dataLength]
-    tempBytes = bytearray(recordBytes)
-    struct.pack_into("<I", tempBytes, CRC_OFFSET, 0);
-    crc = crc32c.crc32c(tempBytes)
+    if check_crc:
+        crc = crc32c.crc32c(encodedData, crc)
+    offset += ms3header.dataLength
+    ms3Rec = Mseed3Record(ms3header,
+                          identifier,
+                          encodedData=encodedData,
+                          extraHeaders=extraHeadersStr )
     if check_crc and ms3header.crc != crc:
         raise MiniseedException(f"crc fail:  Calc: {crc}  Header: {ms3header.crc}")
-    return Mseed3Record(ms3header, encodedData=encodedData )
+    return ms3Rec
+
+def nextMSeed3Record(fileptr, check_crc=True):
+    headBytes = fileptr.read(FIXED_HEADER_SIZE)
+    ms3header = unpackMSeed3FixedHeader(headBytes)
+    crc = 0
+    if check_crc:
+        crcHeadBytes = bytearray(headBytes)
+        struct.pack_into("<I", crcHeadBytes, CRC_OFFSET, 0);
+        crc = crc32c.crc32c(crcHeadBytes)
+    identifierBytes = fileptr.read(ms3header.identifierLength)
+    crc = crc32c.crc32c(identifierBytes, crc)
+    identifier = identifierBytes.decode("utf-8")
+    ehBytes = fileptr.read(ms3header.extraHeadersLength)
+    crc = crc32c.crc32c(ehBytes, crc)
+    extraHeadersStr = ehBytes.decode("utf-8")
+    encodedData = fileptr.read(ms3header.dataLength)
+    crc = crc32c.crc32c(encodedData, crc)
+    if check_crc and ms3header.crc != crc:
+        raise MiniseedException(f"crc fail:  Calc: {crc}  Header: {ms3header.crc}")
+    return Mseed3Record(ms3header, identifier, encodedData=encodedData, extraHeaders=extraHeadersStr )
 
 
 def decompressEncodedData(encoding, numsamples, recordBytes):
