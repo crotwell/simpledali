@@ -27,7 +27,7 @@ from .mseed3 import (
     unpackMSeed3FixedHeader,
     readMSeed3Record,
     MSeed3Header,
-    Mseed3Record,
+    MSeed3Record,
     CRC_OFFSET
 )
 from .dali2jsonl import Dali2Jsonl
@@ -67,11 +67,13 @@ __all__ = [
     WebSocketDataLink,
     MiniseedHeader,
     MiniseedRecord,
-    CRC_OFFSET,
     MiniseedException,
+    unpackMSeed3Record,
     unpackMSeed3FixedHeader,
-    unpackMiniseedRecord,
     readMSeed3Record,
+    MSeed3Header,
+    MSeed3Record,
+    CRC_OFFSET,
     unpackBlockette,
     FDSNSourceId,
     NetworkSourceId,

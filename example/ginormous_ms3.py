@@ -3,7 +3,7 @@
 import array
 import numpy
 import json
-from simpledali import MSeed3Header, Mseed3Record
+from simpledali import MSeed3Header, MSeed3Record
 import simpledali
 import struct
 
@@ -42,7 +42,7 @@ identifier = "FDSN:XX_FAKE__H_H_Z"
 header.sampleRatePeriod = 40
 data = numpy.fromfunction(lambda i:(i%99-49), (86400*header.sampleRate,), dtype=int )
 # header numSamples, encoding set from the input data
-ms3record = simpledali.Mseed3Record(header, identifier, data, extraHeaders=eh)
+ms3record = simpledali.MSeed3Record(header, identifier, data, extraHeaders=eh)
 
 assert len(data) == ms3record.header.numSamples, f"Num samples: {len(data)}  {ms3record.header.numSamples}"
 decomp = ms3record.decompress()

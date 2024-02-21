@@ -164,8 +164,8 @@ class MSeed3Header:
         return self.starttime + timedelta(seconds=self.samplePeriod * (self.numSamples - 1))
 
 
-class Mseed3Record:
     def __init__(self, header, identifier, data, extraHeaders=None):
+class MSeed3Record:
         self.header = header
         self._eh = extraHeaders
         self.identifier = identifier
@@ -388,7 +388,7 @@ def unpackMSeed3Record(recordBytes, check_crc=True):
                                    encodedDataBytes,
                                    ms3header.numSamples,
                                    True)
-    ms3Rec = Mseed3Record(ms3header,
+    ms3Rec = MSeed3Record(ms3header,
                           identifier,
                           encodedData,
                           extraHeaders=extraHeadersStr )
@@ -417,7 +417,7 @@ def readMSeed3Record(fileptr, check_crc=True):
                                    encodedDataBytes,
                                    ms3header.numSamples,
                                    True)
-    ms3 = Mseed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
+    ms3 = MSeed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
     return ms3
 
 

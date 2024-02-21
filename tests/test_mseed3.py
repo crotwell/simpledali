@@ -31,7 +31,7 @@ ref_data_list = [
 #
 
 
-class TestMseed3:
+class TestMSeed3:
     def test_read(self):
         msi_data = [89, 67, 53, 71, 86, 89,
             97, 96, 81, 90, 94, 73,
@@ -94,7 +94,7 @@ class TestMseed3:
         header.sampleRatePeriod = -1
         header.numSamples = len(values)
         identifier = "FDSN:XX_FAKE__H_H_Z"
-        record = simpledali.Mseed3Record(header, identifier, values)
+        record = simpledali.MSeed3Record(header, identifier, values)
         recordBytes = record.pack()
         outRecord = simpledali.unpackMSeed3Record(recordBytes)
         assert identifier == outRecord.identifier
@@ -105,4 +105,4 @@ class TestMseed3:
 
 
 if __name__ == "__main__":
-    TestMseed3().test_ref_data()
+    TestMSeed3().test_ref_data()

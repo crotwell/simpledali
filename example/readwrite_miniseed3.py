@@ -2,8 +2,7 @@
 #
 import array
 import json
-array.array('i')
-from simpledali import MSeed3Header, Mseed3Record
+from simpledali import MSeed3Header, MSeed3Record
 import simpledali
 import struct
 output_file = 'output.mseed'
@@ -43,10 +42,8 @@ data = array.array('i',( (i%99-49) for i in range(0,1000) ))
 header = simpledali.MSeed3Header()
 header.starttime = "2024-01-01T15:13:55.123456Z"
 identifier = "FDSN:XX_FAKE__H_H_Z"
-header.encoding = simpledali.seedcodec.INTEGER
 header.sampleRatePeriod = 40
-encodedData = simpledali.compress(header.encoding, data)
-ms3record = simpledali.Mseed3Record(header, identifier, encodedData, extraHeaders=eh)
+ms3record = simpledali.MSeed3Record(header, identifier, data, extraHeaders=eh)
 
 ms3filename = "test.ms3"
 with open(ms3filename, "wb") as of:
