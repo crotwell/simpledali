@@ -45,7 +45,6 @@ header.starttime = "2024-01-01T15:13:55.123456Z"
 identifier = "FDSN:XX_FAKE__H_H_Z"
 header.encoding = simpledali.seedcodec.INTEGER
 header.sampleRatePeriod = 40
-header.numSamples = len(data)
 encodedData = simpledali.compress(header.encoding, data)
 ms3record = simpledali.Mseed3Record(header, identifier, encodedData, extraHeaders=eh)
 
@@ -63,3 +62,4 @@ with open(ms3filename, "rb") as infile:
     print(f"  extract: {readms3record.details()} ")
     print(f"     from: {ms3filename} ")
     print(f"      crc: {crcAsHex(readms3record.header.crc)}")
+    assert readms3record.header.numSamples == ms3record.header.numSamples, f"Num samples: {readms3record.header.numSamples} != {ms3record.header.numSamples}"
