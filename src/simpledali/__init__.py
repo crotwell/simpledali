@@ -25,7 +25,7 @@ from .miniseed import (
 from .mseed3 import (
     unpackMSeed3Record,
     unpackMSeed3FixedHeader,
-    nextMSeed3Record,
+    readMSeed3Record,
     MSeed3Header,
     Mseed3Record,
     CRC_OFFSET
@@ -71,7 +71,7 @@ __all__ = [
     MiniseedException,
     unpackMSeed3FixedHeader,
     unpackMiniseedRecord,
-    nextMSeed3Record,
+    readMSeed3Record,
     unpackBlockette,
     FDSNSourceId,
     NetworkSourceId,

@@ -383,7 +383,7 @@ def unpackMSeed3Record(recordBytes, check_crc=True):
                           extraHeaders=extraHeadersStr )
     return ms3Rec
 
-def nextMSeed3Record(fileptr, check_crc=True):
+def readMSeed3Record(fileptr, check_crc=True):
     headBytes = fileptr.read(FIXED_HEADER_SIZE)
     ms3header = unpackMSeed3FixedHeader(headBytes)
     crc = 0

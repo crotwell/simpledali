@@ -60,7 +60,7 @@ with open(ms3filename, "wb") as of:
 print()
 print()
 with open(ms3filename, "rb") as infile:
-    readms3record = simpledali.nextMSeed3Record(infile)
+    readms3record = simpledali.readMSeed3Record(infile)
     print(f"  extract: {readms3record.details()} ")
     print(f"     from: {ms3filename} ")
     print(f"      crc: {crcAsHex(readms3record.header.crc)}")
