@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/simpledali)](https://pypi.org/project/simpledali/)
 
-Datalink in pure python.
+Datalink in pure python, and miniseed 2 & 3.
 
 Datalink is a protocol for near-realtime transfer of seismic data, usually in miniseed, but has flexibility to carry any payload such as JSON. The Protocol is defined at
 https://iris-edu.github.io/libdali/datalink-protocol.html
@@ -13,29 +13,35 @@ at [rtserve.iris.washington.edu/](http://rtserve.iris.washington.edu/) allows ac
 
 Also includes parsing for miniseed2 and
 [miniseed3](http://docs.fdsn.org/projects/miniseed3/en/latest/index.html#) for primitive data arrays and
-for Steim1 and Steim2 compression, in pure python.
+for Steim1 and Steim2 decompression, in pure python.
 
 Support for both regular sockets and websockets. For example:
 
 ```
 import asyncio
 import simpledali
-host = "localhost"
-port = 18000
-uri = f"ws://{host}:{port}/datalink"
-verbose = True
 
 async def main():
-    verbose=False
-    programname="simpleDali"
-    username="dragrace"
-    processid=0
-    architecture="python"
-    dali = simpledali.SocketDataLink(host, port, verbose=verbose)
-    # dali = simpledali.WebSocketDataLink(uri, verbose=True)
-    serverId = await dali.id(programname, username, processid, architecture)
-    print(f"Resp: {serverId}")
-    await dali.close()
+    host = "localhost"
+    port = 16000
+    uri = f"ws://{host}:{port}/datalink"
+    verbose = True
+
+    programname = "simpleDali"
+    username = "dragrace"
+    processid = 0
+    architecture = "python"
+
+    # for regular socket (DataLinkPort)
+    async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
+        serverId = await dali.id(programname, username, processid, architecture)
+        print(f"Connect to {host}:{port} via regular socket")
+        print(f"Socket Id: {serverId.message}")
+    # for web socket (ListenPort)
+    async with simpledali.WebSocketDataLink(uri, verbose=verbose) as dali:
+        serverId = await dali.id(programname, username, processid, architecture)
+        print(f"Connect to {uri} via websocket")
+        print(f"WebSocket Id: {serverId.message}")
 
 asyncio.run(main())
 ```
