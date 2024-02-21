@@ -134,9 +134,6 @@ def do_parseargs():
         help="mseed3 file",
         type=argparse.FileType("wb"),
     )
-    parser.add_argument(
-        "--earliest", help="start at earliest packet in server", action="store_true"
-    )
     return parser.parse_args()
 
 
@@ -148,8 +145,13 @@ def main():
     with args.ms2 as inms2:
         with args.ms3 as outms3:
             ms2rec = readMiniseed2Record(inms2)
-            ms3rec = mseed2to3(ms2rec)
-            outBytes = ms3rec.pack()
-            bytesWritten += len(outBytes)
-            outms3.write(outBytes)
-    print(f"wrote {bytesWritten} bytes")
+            while ms2rec is not None:
+                ms3rec = mseed2to3(ms2rec)
+                outBytes = ms3rec.pack()
+                bytesWritten += len(outBytes)
+                outms3.write(outBytes)
+                if args.verbose:
+                    print(f"   {ms3rec}")
+                ms2rec = readMiniseed2Record(inms2)
+    if args.verbose:
+        print(f"wrote {bytesWritten} bytes")
