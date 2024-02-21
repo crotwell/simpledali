@@ -280,7 +280,7 @@ class MSeed3Record:
         return recordBytes
 
     def __str__(self):
-        return f"{self.identifier} {self.header.starttime} {self.header.endtime}"
+        return f"{self.identifier} {isoWZ(self.header.starttime)} {isoWZ(self.header.endtime)}"
 
     def encodingName(self):
         encode_name = f"unknown ({self.header.encoding})"
@@ -339,7 +339,7 @@ class MSeed3Record:
         indentLines = "\n          ".join(ehLines);
         return f"""
           {self.identifier}, version {self.header.publicationVersion}, {self.getSize() + self.header.dataLength + self.header.extraHeadersLength} bytes (format: {self.header.formatVersion})
-                       start time: {self.starttime} ({self.header.dayOfYear:03})
+                       start time: {isoWZ(self.starttime)} ({self.header.dayOfYear:03})
                 number of samples: {self.header.numSamples}
                  sample rate (Hz): {self.header.sampleRate}
                             flags: [{self.header.flags:>08b}] 8 bits${bitFlagStr}
@@ -446,3 +446,6 @@ def readMSeed3Record(fileptr, check_crc=True):
 
 def crcAsHex(crc):
     return "0x{:08X}".format(crc)
+
+def isoWZ(time) -> str:
+    return time.isoformat().replace("+00:00", "Z")
