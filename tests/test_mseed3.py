@@ -80,7 +80,7 @@ class TestMseed3:
                         assert jsonrec["SampleCount"] == rec.header.numSamples
                         assert jsonrec["CRC"] == rec.header.crcAsHex(), f"{jsonrec['CRC']} {rec.header.crcAsHex()}"
                         assert jsonrec["PublicationVersion"] == rec.header.publicationVersion
-                        assert jsonrec["SID"] == rec.header.identifier
+                        assert jsonrec["SID"] == rec.identifier, f"sid {jsonrec['SID']}  {rec.identifier}"
                         jsondata = jsonrec["Data"]
                         assert len(jsondata) == len(data)
                         for i in range(len(jsondata)):
@@ -93,11 +93,11 @@ class TestMseed3:
         header.encoding = simpledali.seedcodec.INTEGER
         header.sampleRatePeriod = -1
         header.numSamples = len(values)
-        encodedData = simpledali.compress(header.encoding, values).dataView
-        header.dataLength = len(encodedData)
-        record = simpledali.Mseed3Record(header, encodedData)
+        identifier = "FDSN:XX_FAKE__H_H_Z"
+        record = simpledali.Mseed3Record(header, identifier, values)
         recordBytes = record.pack()
         outRecord = simpledali.unpackMSeed3Record(recordBytes)
+        assert identifier == outRecord.identifier
         decomp_data = outRecord.decompress()
         assert len(decomp_data) == len(values)
         for i in range(len(decomp_data)):

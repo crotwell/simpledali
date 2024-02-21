@@ -7,7 +7,7 @@
 # https:#github.com/crotwell/seedcodec/
 # constants for compression types
 
-from array import array
+import numpy
 import sys
 import struct
 
@@ -67,18 +67,18 @@ def isFloatCompression(compressionType: int) -> bool:
 
 class EncodedDataSegment:
   compressionType: int
-  dataView: bytearray
+  dataBytes: bytearray
   numSamples: int
   littleEndian: bool
 
   def __init__(self,
     compressionType,
-    dataView: bytearray,
+    dataBytes: bytearray,
     numSamples,
     littleEndian: bool
   ):
     self.compressionType = compressionType
-    self.dataView = dataView
+    self.dataBytes = dataBytes
     self.numSamples = numSamples
     self.littleEndian = littleEndian
 
@@ -88,60 +88,79 @@ class EncodedDataSegment:
   def decode():
     return decompress(
       self.compressionType,
-      self.dataView,
+      self.dataBytes,
       self.numSamples,
       self.littleEndian,
     )
 
-def compress(compressionType, values):
-    littleEndian = True
-    if compressionType ==  INTEGER:
-        # 32 bit integers
-        compCode = 'l'
-    elif compressionType ==  SHORT:
-        # 16 bit integers
-        compCode = 'h'
-    elif compressionType ==  FLOAT32:
-        # 32 bit float
-        compCode = 'f'
-    elif compressionType ==  FLOAT64:
-        # 64 bit float/double
-        compCode = 'd'
+def arrayTypecodeFromMSeed(encoding: int) -> str:
+    if encoding == SHORT:
+        return 'h'
+    elif encoding == INTEGER:
+        return 'l'
+    elif encoding == FLOAT:
+        return 'f'
+    elif encoding == DOUBLE:
+        return 'd'
     else:
+        raise UnsupportedCompressionType(f"type {encoding} not mapable to python array")
+
+def mseed3EncodingFromArrayTypecode(typecode: str) -> int:
+    if typecode == 'h':
+        return SHORT
+    elif typecode == 'l':
+        return INTEGER
+    elif typecode == 'f':
+        return FLOAT
+    elif typecode == 'd':
+        return DOUBLE
+    else:
+        raise UnsupportedCompressionType(f"typecode {typecode} not mapable to mseed encoding")
+
+
+def compress(compressionType: int, values) -> EncodedDataSegment:
+    littleEndian = True
+    compCode = arrayTypecodeFromMSeed(compressionType)
+    try:
+        compCode = arrayTypecodeFromMSeed(compressionType)
+    except:
         raise UnsupportedCompressionType(f"type {compressionType} not yet supported for compression")
-    dataView = struct.pack(f"<{len(values)}{compCode}", *values)
+
+    numSamples = len(values)
+    dataBytes = struct.pack(f"<{len(values)}{compCode}", *values)
 
     return EncodedDataSegment(compressionType,
-                                dataView,
-                                len(values),
-                                littleEndian)
+                            dataBytes,
+                            len(values),
+                            littleEndian)
 
 #
-#  Decompress the samples from the provided DataView and
+#  Decompress the samples from the provided bytes and
 #  return an array of the decompressed values.
 #  Only 16 bit short, 32 bit int, 32 bit float and 64 bit double
 #  along with Steim1 and Steim2 are supported.
 #
 #  @param compressionType compression format as defined in SEED blockette 1000
-#  @param dataView input DataView to be decoded
+#  @param dataBytes input bytes to be decoded
 #  @param numSamples the number of samples that can be decoded from array
 #  <b>b</b>
-#  @param littleEndian if True, dataView is little-endian (intel byte order) <b>b</b>.
+#  @param littleEndian if True, dataBytes is little-endian (intel byte order) <b>b</b>.
 #  @returns array of length <b>numSamples</b>.
 #  @throws CodecException fail to decompress.
 #  @throws UnsupportedCompressionType unsupported compression type
 
 def decompress(
   compressionType: int,
-  dataView: bytearray,
+  dataBytes: bytearray,
   numSamples: int,
   littleEndian: bool,
 ):
-
   # in case of record with no data points, ex detection blockette, which often have compression type
   # set to 0, which messes up the decompresser even though it doesn't matter since there is no data.
   if (numSamples == 0):
-    return array('i', [])
+    dt = numpy.dtype(numpy.int32)
+    dt = dt.newbyteorder('<')
+    return numpy.asarray([], dt)
 
   out = None
   offset = 0
@@ -149,64 +168,53 @@ def decompress(
   #switch (compressionType):
   if compressionType == SHORT or compressionType == DWWSSN:
       # 16 bit values
-      if (len(dataView) < 2 * numSamples):
+      if (len(dataBytes) < 2 * numSamples):
         raise CodecException(
-          f"Not enough bytes for {numSamples} 16 bit data points, only {len(dataView)} bytes.",
+          f"Not enough bytes for {numSamples} 16 bit data points, only {len(dataBytes)} bytes.",
         )
-
-      out = array('i', [0]*numSamples)
-
-      for i in range(numSamples):
-        out[i] = getInt16(dataView, offset, littleEndian)
-        offset += 2
+      dt = numpy.dtype(numpy.int16)
+      dt = dt.newbyteorder('<')
+      out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType ==  INTEGER:
       # 32 bit integers
-      if (len(dataView) < 4 * numSamples):
+      if (len(dataBytes) < 4 * numSamples):
         raise CodecException(
-          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataView)} bytes.",
+          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataBytes)} bytes.",
         )
 
-      out = array('l', [0]*numSamples)
-
-      for i in range(numSamples):
-        out[i] = getInt32(dataView, offset, littleEndian)
-        offset += 4
+      dt = numpy.dtype(numpy.int32)
+      dt = dt.newbyteorder('<')
+      out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
   elif compressionType == FLOAT:
       # 32 bit floats
-      if (len(dataView) < 4 * numSamples):
+      if (len(dataBytes) < 4 * numSamples):
         raise CodecException(
-          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataView)} bytes.",
+          f"Not enough bytes for {numSamples} 32 bit data points, only {len(dataBytes)} bytes.",
         )
 
-
-      out = array('f', [0]*numSamples)
-
-      for i in range(numSamples):
-        out[i] = getFloat32(dataView, offset, littleEndian)
-        offset += 4
+      dt = numpy.dtype(numpy.float32)
+      dt = dt.newbyteorder('<')
+      out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType == DOUBLE:
       # 64 bit doubles
-      if (len(dataView) < 8 * numSamples):
+      if (len(dataBytes) < 8 * numSamples):
         raise CodecException(
-          f"Not enough bytes for {numSamples} 64 bit data points, only {len(dataView)} bytes.",
+          f"Not enough bytes for {numSamples} 64 bit data points, only {len(dataBytes)} bytes.",
         )
 
-
-      out = array('d', [0]*numSamples)
-
-      for i in range(numSamples):
-        out[i] = getFloat64(dataView, offset, littleEndian)
-        offset += 8
+      dt = numpy.dtype(numpy.float64)
+      dt = dt.newbyteorder('<')
+      out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType == STEIM1:
       # steim 1
-      out = decodeSteim1(dataView, numSamples, littleEndian, 0)
+      out = decodeSteim1(dataBytes, numSamples, littleEndian, 0)
 
   elif compressionType == STEIM2:
       # steim 2
-      out = decodeSteim2(dataView, numSamples, littleEndian, 0)
+      out = decodeSteim2(dataBytes, numSamples, littleEndian, 0)
 
   else:
       # unknown format????
@@ -225,10 +233,10 @@ def decompress(
 #  record.  This offset value can be placed in <b>bias</b>, otherwise leave
 #  the value as 0.
 #
-#  @param dataView input DataView to be decoded
+#  @param dataBytes input bytes to be decoded
 #  @param numSamples the number of samples that can be decoded from array
 #  <b>b</b>
-#  @param littleEndian if True, dataView is little-endian (intel byte order) <b>b</b>.
+#  @param littleEndian if True, dataBytes is little-endian (intel byte order) <b>b</b>.
 #  @param bias the first difference value will be computed from this value.
 #  If set to 0, the method will attempt to use the X(0) constant instead.
 #  @returns int array of length <b>numSamples</b>.
@@ -236,7 +244,7 @@ def decompress(
 #  bytes.
 
 def decodeSteim1(
-  dataView: bytearray,
+  dataBytes: bytearray,
   numSamples,
   littleEndian: bool,
   bias,
@@ -245,21 +253,21 @@ def decodeSteim1(
   # of samples.  littleEndian is true for little endian byte order.  bias represents
   # a previous value which acts as a starting constant for continuing differences integration.  At the
   # very start, bias is set to 0.
-  if (len(dataView) % 64 != 0):
+  if (len(dataBytes) % 64 != 0):
     raise CodecException(
-      f"encoded data length is not multiple of 64 bytes ({len(dataView)})",
+      f"encoded data length is not multiple of 64 bytes ({len(dataBytes)})",
     )
 
-
-  samples = array('i', [0]*numSamples)
-  numFrames = len(dataView) // 64
+  dt = numpy.dtype(numpy.int32)
+  samples = numpy.zeros((numSamples,), dt)
+  numFrames = len(dataBytes) // 64
   current = 0
   start = 0
   firstData = 0
   lastValue = 0
 
   for i in range(numFrames):
-    tempSamples = extractSteim1Samples(dataView, i * 64, littleEndian) # returns only differences except for frame 0
+    tempSamples = extractSteim1Samples(dataBytes, i * 64, littleEndian) # returns only differences except for frame 0
 
     firstData = 0 # d(0) is byte 0 by default
 
@@ -300,29 +308,29 @@ def decodeSteim1(
   #
   return samples
 
-def getInt16(dataView, offset, littleEndian):
+def getInt16(dataBytes, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "h", dataView[offset : offset + 2])
+    vals = struct.unpack(endianChar+ "h", dataBytes[offset : offset + 2])
     return vals[0]
 
-def getInt32(dataView, offset, littleEndian):
+def getInt32(dataBytes, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "l", dataView[offset : offset + 4])
+    vals = struct.unpack(endianChar+ "l", dataBytes[offset : offset + 4])
     return vals[0]
 
-def getFloat32(dataView, offset, littleEndian):
+def getFloat32(dataBytes, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "f", dataView[offset : offset + 4])
+    vals = struct.unpack(endianChar+ "f", dataBytes[offset : offset + 4])
     return vals[0]
 
-def getFloat64(dataView, offset, littleEndian):
+def getFloat64(dataBytes, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "d", dataView[offset : offset + 8])
+    vals = struct.unpack(endianChar+ "d", dataBytes[offset : offset + 8])
     return vals[0]
 
-def getUint32(dataView, offset, littleEndian):
+def getUint32(dataBytes, offset, littleEndian):
     endianChar = "<" if littleEndian else ">";
-    vals = struct.unpack(endianChar+ "I", dataView[offset : offset + 4])
+    vals = struct.unpack(endianChar+ "I", dataBytes[offset : offset + 4])
     return vals[0]
 
 #
@@ -333,18 +341,18 @@ def getUint32(dataView, offset, littleEndian):
 # bytes in the returned int array...else, do not include the header bytes
 # in the returned array.
 #
-# @param dataView byte array of compressed data differences
+# @param dataBytes byte array of compressed data differences
 # @param offset index to begin reading compressed bytes for decoding
 # @param littleEndian reverse the endian-ness of the compressed bytes being read
 # @returns integer array of difference (and constant) values
 
 def extractSteim1Samples(
-  dataView: bytearray,
+  dataBytes: bytearray,
   offset: int,
   littleEndian: bool,
-) -> array:
+) -> numpy.array:
   # get nibbles
-  nibbles = getUint32(dataView, offset, littleEndian)
+  nibbles = getUint32(dataBytes, offset, littleEndian)
   currNibble = 0
   temp = [] # 4 samples * 16 longwords, can't be more than 64
 
@@ -367,26 +375,26 @@ def extractSteim1Samples(
         #  ("0 means header info")
         # only include header info if offset is 0
         if (offset == 0):
-          temp.append(getInt32(dataView, offset+ i * 4, littleEndian))
+          temp.append(getInt32(dataBytes, offset+ i * 4, littleEndian))
           currNum+=1
     elif currNibble ==  1:
         #  ("1 means 4 one byte differences")
 
         endianChar = "<" if littleEndian else ">";
-        temp += struct.unpack(endianChar+ "bbbb", dataView[offset + i * 4: offset+ i * 4 + 4])
+        temp += struct.unpack(endianChar+ "bbbb", dataBytes[offset + i * 4: offset+ i * 4 + 4])
         currNum+=4
 
     elif currNibble ==  2:
         #  ("2 means 2 two byte differences")
 
         endianChar = "<" if littleEndian else ">";
-        temp += struct.unpack(endianChar+ "hh", dataView[offset + i * 4: offset+ i * 4 + 4])
+        temp += struct.unpack(endianChar+ "hh", dataBytes[offset + i * 4: offset+ i * 4 + 4])
         currNum+=2
 
 
     elif currNibble ==  3:
         #  ("3 means 1 four byte difference")
-        temp.append(getInt32(dataView, offset + i * 4, littleEndian))
+        temp.append(getInt32(dataBytes, offset + i * 4, littleEndian))
         currNum+=1
 
     else:
@@ -405,7 +413,7 @@ def extractSteim1Samples(
 #  record.  This offset value can be placed in <b>bias</b>, otherwise leave
 #  the value as 0.
 #
-#  @param dataView input byte array to be decoded
+#  @param dataBytes input byte array to be decoded
 #  @param numSamples the number of samples that can be decoded from array
 #  @param littleEndian if True, endian-ness is little
 #  @param bias the first difference value will be computed from this value.
@@ -415,26 +423,27 @@ def extractSteim1Samples(
 #  bytes.
 
 def decodeSteim2(
-  dataView: bytearray,
+  dataBytes: bytearray,
   numSamples: int,
   littleEndian: bool,
   bias: int,
 ):
-  if (len(dataView) % 64 != 0):
+  if (len(dataBytes) % 64 != 0):
     raise CodecException(
-      f"encoded data length is not multiple of 64 bytes ({len(dataView)})",
+      f"encoded data length is not multiple of 64 bytes ({len(dataBytes)})",
     )
 
-  samples = array('i', [0]*numSamples)
+  dt = numpy.dtype(numpy.int32)
+  samples = numpy.zeros((numSamples,), dt)
 
-  numFrames = len(dataView) // 64
+  numFrames = len(dataBytes) // 64
   current = 0
   start = 0
   firstData = 0
   lastValue = 0
 
   for i in range(numFrames):
-    tempSamples = extractSteim2Samples(dataView, i * 64, False) # returns only differences except for frame 0
+    tempSamples = extractSteim2Samples(dataBytes, i * 64, False) # returns only differences except for frame 0
 
     firstData = 0 # d(0) is byte 0 by default
 
@@ -482,21 +491,22 @@ def decodeSteim2(
 # bytes in the returned int array...else, do not include the header bytes
 # in the returned array.
 #
-# @param dataView byte array of compressed data differences
+# @param dataBytes byte array of compressed data differences
 # @param offset index to begin reading compressed bytes for decoding
 # @param littleEndian  the endian-ness of the compressed bytes being read
 # @returns integer array of difference (and constant) values
 
 def extractSteim2Samples(
-  dataView: bytearray,
+  dataBytes: bytearray,
   offset: int,
   littleEndian: bool,
-) -> array:
+) -> numpy.array:
   # get nibbles
-  nibbles = getUint32(dataView, offset, False) # steim always big endian for nibbles
+  nibbles = getUint32(dataBytes, offset, False) # steim always big endian for nibbles
   currNibble = 0
   dnib = 0
-  temp = array('i', [0]*106) #max 106 = 7 samples * 15 long words + 1 nibble int
+  dt = numpy.dtype(numpy.int32)
+  temp = numpy.zeros((106,), dt) #max 106 = 7 samples * 15 long words + 1 nibble int
 
   currNum = 0
   diffCount = 0 # number of differences
@@ -517,20 +527,20 @@ def extractSteim2Samples(
         # "0 means header info"
         # only include header info if offset is 0
         if (offset == 0):
-            temp[currNum] = getInt32(dataView, offset + i * 4, False)
+            temp[currNum] = getInt32(dataBytes, offset + i * 4, False)
             currNum+=1
 
     elif  currNibble ==  1:
 
         endianChar = "<" if littleEndian else ">";
-        vals = struct.unpack(endianChar+ "bbbb", dataView[offset + i * 4: offset+ i * 4 + 4])
+        vals = struct.unpack(endianChar+ "bbbb", dataBytes[offset + i * 4: offset+ i * 4 + 4])
         # print(f"1 means 4 one byte differences {currNum} {vals}")
         for k in range(4):
             temp[currNum+k] = vals[k]
         currNum+=4
 
     elif  currNibble == 2:
-        tempInt = getUint32(dataView, offset + i * 4, False)
+        tempInt = getUint32(dataBytes, offset + i * 4, False)
         dnib = (tempInt >> 30) & 0x03
 
         #switch (dnib):
@@ -571,7 +581,7 @@ def extractSteim2Samples(
 
 
     elif  currNibble == 3:
-        tempInt = getUint32(dataView, offset + i * 4, False)
+        tempInt = getUint32(dataBytes, offset + i * 4, False)
         dnib = (tempInt >> 30) & 0x03
         # for case 3, we are going to use a for-loop formulation that
         # accomplishes the same thing as case 2, just less verbose.
