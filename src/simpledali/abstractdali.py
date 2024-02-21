@@ -299,7 +299,7 @@ class DataLink(ABC):
         await self.send(header, None)
 
     async def reconnect(self):
-        if True or self.verbose:
+        if self.verbose:
             print("reconnecting...")
         await self.close()
         await self.createDaliConnection()
