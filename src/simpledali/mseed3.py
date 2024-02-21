@@ -212,6 +212,14 @@ class Mseed3Record:
     def endtime(self):
         return self.header.endtime
 
+    def hasExtraHeaders(self):
+        if self._eh is None:
+            return False
+        elif isinstance(self._eh, dict) and len(self._eh) > 0:
+            return True
+        elif isinstance(self._eh, str) and len(self._eh) > 2:
+            return True
+        return False
     def clone(self):
         return unpackMiniseedRecord(self.pack())
 
@@ -224,7 +232,7 @@ class Mseed3Record:
         # string to bytes
         identifierBytes = self.identifier.encode("UTF-8")
         self.header.identifierLength = len(identifierBytes)
-        if self._eh is not None:
+        if self._eh is None:
             extraHeadersStr = ""
         elif isinstance(self._eh, dict):
             extraHeadersStr = json.dumps(self._eh)
@@ -249,6 +257,7 @@ class Mseed3Record:
         struct.pack_into("<I", recordBytes, CRC_OFFSET, 0);
         crc = crc32c.crc32c(recordBytes)
         struct.pack_into("<I", recordBytes, CRC_OFFSET, crc);
+        self.header.crc = crc
         return recordBytes
 
     def __str__(self):
@@ -305,7 +314,9 @@ class Mseed3Record:
         if (self.header.flags & 0x80):
           bitFlagStr = f"""{bitFlagStr}
                              [Bit 7] Undefined bit set"""
-        ehLines = json.dumps(self.eh, indent=2).split("\n")
+        ehLines = ""
+        if self.hasExtraHeaders():
+            ehLines = json.dumps(self.eh, indent=2).split("\n")
         indentLines = "\n          ".join(ehLines);
         return f"""
           {self.identifier}, version {self.header.publicationVersion}, {self.getSize() + self.header.dataLength + self.header.extraHeadersLength} bytes (format: {self.header.formatVersion})
@@ -406,7 +417,8 @@ def readMSeed3Record(fileptr, check_crc=True):
                                    encodedDataBytes,
                                    ms3header.numSamples,
                                    True)
-    return Mseed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
+    ms3 = Mseed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
+    return ms3
 
 
 def decompressEncodedData(encoding, numSamples, recordBytes):

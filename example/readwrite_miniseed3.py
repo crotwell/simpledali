@@ -46,8 +46,7 @@ identifier = "FDSN:XX_FAKE__H_H_Z"
 header.encoding = simpledali.seedcodec.INTEGER
 header.sampleRatePeriod = 40
 header.numSamples = len(data)
-encodedData = simpledali.compress(header.encoding, data).dataView
-header.dataLength = len(encodedData)
+encodedData = simpledali.compress(header.encoding, data)
 ms3record = simpledali.Mseed3Record(header, identifier, encodedData, extraHeaders=eh)
 
 ms3filename = "test.ms3"
