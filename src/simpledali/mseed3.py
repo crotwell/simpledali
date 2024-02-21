@@ -415,6 +415,8 @@ def unpackMSeed3Record(recordBytes, check_crc=True):
 
 def readMSeed3Record(fileptr, check_crc=True):
     headBytes = fileptr.read(FIXED_HEADER_SIZE)
+    if len(headBytes) == 0:
+        return None
     ms3header = unpackMSeed3FixedHeader(headBytes)
     crc = 0
     if check_crc:
