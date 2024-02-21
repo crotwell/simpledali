@@ -298,7 +298,7 @@ class MSeed3Record:
         return recordBytes
 
     def __str__(self):
-        return f"{self.identifier} {isoWZ(self.header.starttime)} {isoWZ(self.header.endtime)}"
+        return f"{self.identifier} {isoWZ(self.header.starttime)} {isoWZ(self.header.endtime)} {self.header.numSamples} pts"
 
     def encodingName(self):
         encode_name = f"unknown ({self.header.encoding})"
@@ -322,7 +322,7 @@ class MSeed3Record:
             encode_name = "Opaque data"
         return encode_name
 
-    def details(self):
+    def details(self, showExtraHeaders=True):
 
         encode_name = self.encodingName()
 
@@ -352,7 +352,7 @@ class MSeed3Record:
           bitFlagStr = f"""{bitFlagStr}
                              [Bit 7] Undefined bit set"""
         ehLines = ""
-        if self.hasExtraHeaders():
+        if showExtraHeaders and self.hasExtraHeaders():
             ehLines = json.dumps(self.eh, indent=2).split("\n")
         indentLines = "\n          ".join(ehLines);
         return f"""
