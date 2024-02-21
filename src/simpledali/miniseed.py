@@ -528,6 +528,8 @@ def unpackFixedHeaderGuessByteOrder(recordBytes):
 
 def unpackMiniseedRecord(recordBytes):
     header = unpackFixedHeaderGuessByteOrder(recordBytes)
+    endianChar = "<" if header.byteOrder == LITTLE_ENDIAN else ">"
+
     blockettes = []
     if header.numBlockettes > 0:
         nextBOffset = header.blocketteOffset
@@ -582,10 +584,8 @@ def readMiniseed2Record(fileptr):
     if len(headBytes) == 0:
         return None
     header = unpackFixedHeaderGuessByteOrder(headBytes)
-    if header.byteOrder == LITTLE_ENDIAN:
-        endianChar = "<"
-    else:
-        endianChar = ">"
+    endianChar = "<" if header.byteOrder == LITTLE_ENDIAN else ">"
+
 
     # assume all blocketts between fixed header and start of data
     blocketteBytes = fileptr.read(header.dataOffset-HEADER_SIZE)
