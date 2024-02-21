@@ -43,7 +43,7 @@ async def main(host, port, verbose=False):
     username = "dragrace"
     processid = 0
     architecture = "python"
-    # dali = simpledali.SocketDataLink(host, port, verbose=verbose)
+    # async with  simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
     # or can use websockets if the server implements
     async with simpledali.WebSocketDataLink(
         uri, verbose=verbose, ping_interval=ping_interval
