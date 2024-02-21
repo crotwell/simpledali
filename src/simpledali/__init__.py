@@ -21,6 +21,7 @@ from .miniseed import (
     unpackMiniseedRecord,
     unpackBlockette,
     MiniseedException,
+    readMiniseed2Record
 )
 from .mseed3 import (
     unpackMSeed3Record,
@@ -46,6 +47,7 @@ from .seedcodec import (
     decodeSteim1,
     decodeSteim2
 )
+from .mseed2to3 import mseed2to3
 
 __all__ = [
     DataLink,
@@ -68,6 +70,7 @@ __all__ = [
     MiniseedHeader,
     MiniseedRecord,
     MiniseedException,
+    readMiniseed2Record,
     unpackMSeed3Record,
     unpackMSeed3FixedHeader,
     readMSeed3Record,
@@ -86,4 +89,5 @@ __all__ = [
     UnsupportedCompressionType,
     decodeSteim1,
     decodeSteim2,
+    mseed2to3,
 ]
