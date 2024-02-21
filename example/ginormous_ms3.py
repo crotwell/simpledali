@@ -40,7 +40,7 @@ header = simpledali.MSeed3Header()
 header.starttime = "2024-01-01T15:13:55.123456Z"
 identifier = "FDSN:XX_FAKE__H_H_Z"
 header.sampleRatePeriod = 40
-data = numpy.fromfunction(lambda i:(i%99-49), (86400*header.sampleRate,), dtype=int )
+data = numpy.fromfunction(lambda i:(i%99-49), (86400*header.sampleRate,), dtype=numpy.float32 )
 # header numSamples, encoding set from the input data
 ms3record = simpledali.MSeed3Record(header, identifier, data, extraHeaders=eh)
 

@@ -35,6 +35,9 @@ STEIM1: int = 10
 # Steim2 compression
 STEIM2: int = 11
 
+# Steim2 compression, not implemented
+STEIM3: int = 19
+
 # CDSN 16 bit gain ranged
 CDSN: int = 16
 
@@ -117,10 +120,21 @@ def mseed3EncodingFromArrayTypecode(typecode: str) -> int:
     else:
         raise UnsupportedCompressionType(f"typecode {typecode} not mapable to mseed encoding")
 
+def mseed3EncodingFromNumpyDT(dt: numpy.dtype) -> int:
+    if dt.type is numpy.int16:
+        return SHORT
+    elif dt.type is numpy.int32:
+        return INTEGER
+    elif dt.type is numpy.float32:
+        return FLOAT
+    elif dt.type is numpy.float64:
+        return DOUBLE
+    else:
+        raise UnsupportedCompressionType(f"numpy type {dt.type} not mapable to mseed encoding")
+
 
 def compress(compressionType: int, values) -> EncodedDataSegment:
     littleEndian = True
-    compCode = arrayTypecodeFromMSeed(compressionType)
     try:
         compCode = arrayTypecodeFromMSeed(compressionType)
     except:
@@ -173,7 +187,10 @@ def decompress(
           f"Not enough bytes for {numSamples} 16 bit data points, only {len(dataBytes)} bytes.",
         )
       dt = numpy.dtype(numpy.int16)
-      dt = dt.newbyteorder('<')
+      if littleEndian:
+          dt = dt.newbyteorder('<')
+      else:
+          dt = dt.newbyteorder('>')
       out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType ==  INTEGER:
@@ -184,7 +201,10 @@ def decompress(
         )
 
       dt = numpy.dtype(numpy.int32)
-      dt = dt.newbyteorder('<')
+      if littleEndian:
+          dt = dt.newbyteorder('<')
+      else:
+          dt = dt.newbyteorder('>')
       out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
   elif compressionType == FLOAT:
       # 32 bit floats
@@ -194,7 +214,10 @@ def decompress(
         )
 
       dt = numpy.dtype(numpy.float32)
-      dt = dt.newbyteorder('<')
+      if littleEndian:
+          dt = dt.newbyteorder('<')
+      else:
+          dt = dt.newbyteorder('>')
       out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType == DOUBLE:
@@ -205,7 +228,10 @@ def decompress(
         )
 
       dt = numpy.dtype(numpy.float64)
-      dt = dt.newbyteorder('<')
+      if littleEndian:
+          dt = dt.newbyteorder('<')
+      else:
+          dt = dt.newbyteorder('>')
       out = numpy.frombuffer(dataBytes, dtype=dt, count=numSamples)
 
   elif compressionType == STEIM1:

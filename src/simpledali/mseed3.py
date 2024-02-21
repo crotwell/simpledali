@@ -1,18 +1,22 @@
 import struct
 from array import array
+import numpy
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
 import json
 import math
 import sys
 import crc32c
+from typing import Union
 
 from .miniseed import MiniseedException
 from .seedcodec import (
     decompress,
     compress,
-    STEIM1, STEIM2,
-    EncodedDataSegment
+    STEIM1, STEIM2, STEIM3,
+    EncodedDataSegment,
+    mseed3EncodingFromArrayTypecode,
+    mseed3EncodingFromNumpyDT
     )
 
 
@@ -60,8 +64,6 @@ class MSeed3Header:
     publicationVersion: int;
     identifierLength: int;
     extraHeadersLength: int;
-    identifier: str;
-    extraHeadersStr: str;
     dataLength: int;
     def __init__(self):
         # empty construction
@@ -164,8 +166,12 @@ class MSeed3Header:
         return self.starttime + timedelta(seconds=self.samplePeriod * (self.numSamples - 1))
 
 
-    def __init__(self, header, identifier, data, extraHeaders=None):
 class MSeed3Record:
+    header: MSeed3Header
+    identifier: str
+    _eh: Union[str,dict,None]
+    encodedData: EncodedDataSegment
+    def __init__(self, header: MSeed3Header, identifier: str, data, extraHeaders: Union[str,dict,None]=None):
         self.header = header
         self._eh = extraHeaders
         self.identifier = identifier
@@ -176,6 +182,14 @@ class MSeed3Record:
                                            data,
                                            header.numSamples,
                                            True),
+        elif isinstance(data, array):
+            self.header.encoding = mseed3EncodingFromArrayTypecode(data.typecode)
+            self.encodedData = compress(self.header.encoding, data)
+        elif isinstance(data, numpy.ndarray):
+            self.header.encoding = mseed3EncodingFromNumpyDT(data.dtype)
+            if data.dtype.byteorder == '>':
+                data = data.newbyteorder('<')
+            self.encodedData = compress(self.header.encoding, data)
         else:
             # try to compress with given type?
             self.encodedData = compress(self.header.encoding, data)
@@ -201,7 +215,12 @@ class MSeed3Record:
     def decompress(self):
         data = None
         if self.encodedData is not None:
-            data = decompressEncodedData(self.header.encoding, self.header.numSamples, self.encodedData.dataBytes)
+            byteOrder = LITTLE_ENDIAN
+            if (self.header.encoding == STEIM1 or
+                self.header.encoding == STEIM2 or
+                self.header.encoding == STEIM3):
+                byteOrder = BIG_ENDIAN
+            data = decompress(self.header.encoding, self.encodedData.dataBytes, self.header.numSamples, byteOrder == LITTLE_ENDIAN)
         return data
 
     @property
@@ -403,15 +422,18 @@ def readMSeed3Record(fileptr, check_crc=True):
         struct.pack_into("<I", crcHeadBytes, CRC_OFFSET, 0);
         crc = crc32c.crc32c(crcHeadBytes)
     identifierBytes = fileptr.read(ms3header.identifierLength)
-    crc = crc32c.crc32c(identifierBytes, crc)
+    if check_crc:
+        crc = crc32c.crc32c(identifierBytes, crc)
     identifier = identifierBytes.decode("utf-8")
     ehBytes = fileptr.read(ms3header.extraHeadersLength)
-    crc = crc32c.crc32c(ehBytes, crc)
+    if check_crc:
+        crc = crc32c.crc32c(ehBytes, crc)
     extraHeadersStr = ehBytes.decode("utf-8")
     encodedDataBytes = fileptr.read(ms3header.dataLength)
-    crc = crc32c.crc32c(encodedDataBytes, crc)
-    if check_crc and ms3header.crc != crc:
-        raise MiniseedException(f"crc fail:  Calc: {crc}  Header: {ms3header.crc}")
+    if check_crc:
+        crc = crc32c.crc32c(encodedDataBytes, crc)
+        if ms3header.crc != crc:
+            raise MiniseedException(f"crc fail:  Calc: {crc}  Header: {ms3header.crc}")
 
     encodedData=EncodedDataSegment(ms3header.encoding,
                                    encodedDataBytes,
@@ -419,16 +441,6 @@ def readMSeed3Record(fileptr, check_crc=True):
                                    True)
     ms3 = MSeed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
     return ms3
-
-
-def decompressEncodedData(encoding, numSamples, recordBytes):
-    byteOrder = LITTLE_ENDIAN
-    if (encoding == STEIM1 or encoding == STEIM2):
-        byteOrder = BIG_ENDIAN
-    needSwap = (byteOrder == BIG_ENDIAN and sys.byteorder == "little") or (
-                byteOrder == LITTLE_ENDIAN and sys.byteorder == "big")
-    data = decompress(encoding, recordBytes, numSamples, byteOrder == LITTLE_ENDIAN)
-    return data
 
 def crcAsHex(crc):
     return "0x{:08X}".format(crc)

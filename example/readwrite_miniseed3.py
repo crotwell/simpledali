@@ -37,7 +37,7 @@ eh = {
     }
 
 
-data = array.array('i',( (i%99-49) for i in range(0,1000) ))
+data = array.array('f',( (i%99-49) for i in range(0,1000) ))
 #data = [(i%99-49) for i in range(0,1000)]
 header = simpledali.MSeed3Header()
 header.starttime = "2024-01-01T15:13:55.123456Z"
