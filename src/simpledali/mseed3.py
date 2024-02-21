@@ -67,26 +67,26 @@ class MSeed3Header:
     dataLength: int;
     def __init__(self):
         # empty construction
-        self.recordIndicator = "MS";
-        self.formatVersion = 3;
-        self.flags = 0;
-        self.nanosecond = 0;
-        self.year = 1970;
-        self.dayOfYear = 1;
-        self.hour = 0;
-        self.minute = 0;
-        self.second = 0;
-        self.encoding = 3; # 32 bit ints
+        self.recordIndicator = "MS"
+        self.formatVersion = 3
+        self.flags = 0
+        self.nanosecond = 0
+        self.year = 1970
+        self.dayOfYear = 1
+        self.hour = 0
+        self.minute = 0
+        self.second = 0
+        self.encoding = 3 # 32 bit ints
 
-        self.sampleRatePeriod = 1;
-        self.numSamples = 0;
-        self.crc = 0;
-        self.publicationVersion = UNKNOWN_DATA_VERSION;
+        self.sampleRatePeriod = 1
+        self.numSamples = 0
+        self.crc = 0
+        self.publicationVersion = UNKNOWN_DATA_VERSION
         self.identifierLength = 0;
-        self.extraHeadersLength = 2;
-        self.identifier = "";
-        self.extraHeadersStr = "{}";
-        self.dataLength = 0;
+        self.extraHeadersLength = 0
+        self.identifier = ""
+        self.extraHeadersStr = ""
+        self.dataLength = 0
 
     def crcAsHex(self):
         return "0x{:08X}".format(self.crc)
@@ -206,10 +206,15 @@ class MSeed3Record:
     @eh.setter
     def eh(self, ehDict):
         self._eh = ehDict
+        if self._eh is not None and isinstance(self._eh, str):
+            self.header.extraHeadersLength = len(self._eh.encode("UTF-8"))
+        else:
+            self.header.extraHeadersLength = None
 
     @eh.deleter
     def eh(self):
         del self._eh
+        self.header.extraHeadersLength = 0
 
 
     def decompress(self):
@@ -243,10 +248,23 @@ class MSeed3Record:
         return unpackMiniseedRecord(self.pack())
 
     def getSize(self):
-        return FIXED_HEADER_SIZE+self.header.identifierLength+self.header.extraHeadersLength+self.header.dataLength
-
+        """
+        Calculates the size of the record. Returns None if any of the
+        identifier, extra headers or data lengths are not yet calculated.
+        """
+        if self.header.identifierLength is not None and \
+                self.header.extraHeadersLength is not None and \
+                self.header.dataLength:
+            return FIXED_HEADER_SIZE+self.header.identifierLength+self.header.extraHeadersLength+self.header.dataLength
+        else:
+            return None
 
     def pack(self):
+        """
+        Pack the record contents into a bytearray. Header values for the lengths
+        are updated, so the record header represents the output bytes after
+        packing.
+        """
         self.header.crc = 0
         # string to bytes
         identifierBytes = self.identifier.encode("UTF-8")
@@ -338,7 +356,7 @@ class MSeed3Record:
             ehLines = json.dumps(self.eh, indent=2).split("\n")
         indentLines = "\n          ".join(ehLines);
         return f"""
-          {self.identifier}, version {self.header.publicationVersion}, {self.getSize() + self.header.dataLength + self.header.extraHeadersLength} bytes (format: {self.header.formatVersion})
+          {self.identifier}, version {self.header.publicationVersion}, {self.getSize()} bytes (format: {self.header.formatVersion})
                        start time: {isoWZ(self.starttime)} ({self.header.dayOfYear:03})
                 number of samples: {self.header.numSamples}
                  sample rate (Hz): {self.header.sampleRate}
