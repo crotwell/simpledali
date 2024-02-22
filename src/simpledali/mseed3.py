@@ -165,6 +165,24 @@ class MSeed3Header:
     def endtime(self):
         return self.starttime + timedelta(seconds=self.samplePeriod * (self.numSamples - 1))
 
+    def clone(self):
+        ms3header = MSeed3Header()
+        ms3header.flags = self.flags
+        ms3header.nanosecond = self.nanosecond
+        ms3header.year = self.year
+        ms3header.dayOfYear = self.dayOfYear
+        ms3header.hour = self.hour
+        ms3header.minute = self.minute
+        ms3header.second = self.second
+        ms3header.encoding = self.encoding
+        ms3header.sampleRatePeriod = self.sampleRatePeriod
+        ms3header.numSamples = self.numSamples
+        ms3header.crc = self.crc
+        ms3header.publicationVersion = self.publicationVersion
+        ms3header.identifierLength = self.identifierLength
+        ms3header.extraHeadersLength = self.extraHeadersLength
+        ms3header.dataLength = self.dataLength
+        return ms3header
 
 class MSeed3Record:
     header: MSeed3Header
@@ -474,6 +492,49 @@ def readMSeed3Record(fileptr, check_crc=True):
                                    True)
     ms3 = MSeed3Record(ms3header, identifier, encodedData, extraHeaders=extraHeadersStr )
     return ms3
+
+def areCompatible(ms3a: MSeed3Record, ms3b: MSeed3Record, timeTolFactor = 0.5) -> bool:
+    out = True
+    out = out and ms3a.identifier == ms3b.identifier
+    out = out and ms3b.header.sampleRatePeriod == ms3b.header.sampleRatePeriod
+    out = out and ms3a.header.encoding == ms3b.header.encoding
+    out = out and ms3a.header.publicationVersion == ms3b.header.publicationVersion
+    out = out and ms3a.endtime < ms3b.starttime
+    if out:
+        predNextStart = ms3a.starttime + timedelta(seconds=ms3a.header.samplePeriod * ms3a.header.numSamples )
+        out = out and (ms3b.starttime - predNextStart).total_seconds() < ms3a.header.samplePeriod*timeTolFactor
+    return out
+
+def merge(ms3a: MSeed3Record, ms3b: MSeed3Record) -> list[MSeed3Record]:
+    """
+    Merges two MSeed3Records if possible. Returned list will have either
+    both original records if merge is not possible, or a single new
+    record if merge was.
+    Note extra headers are taken from the first record and any headers in the
+    second record are ignored. Merging of dict structures just seems to hard
+    to be done automatically, without understanding the meaning of the items.
+    """
+    out = [ms3a, ms3b]
+    if ms3a.header.encoding == 0 or ms3a.header.encoding > 5:
+        # only primitve encoding currently are mergable
+        pass
+    elif areCompatible(ms3a, ms3b):
+        header = ms3a.header.clone()
+        header.numSamples += ms3b.header.numSamples
+        dataBytes = bytearray()
+        dataBytes.extend(ms3a.encodedData.dataBytes)
+        dataBytes.extend(ms3b.encodedData.dataBytes)
+        encodedData = EncodedDataSegment(ms3a.encodedData.compressionType,
+                                         dataBytes,
+                                         header.numSamples,
+                                         ms3a.encodedData.littleEndian)
+        if ms3a.hasExtraHeaders():
+            eh =  json.loads(json.dumps(ms3a.eh))
+        else:
+            eh = None
+        merged = MSeed3Record(header, ms3a.identifier, encodedData, eh)
+        out = [ merged ]
+    return out
 
 def crcAsHex(crc):
     return "0x{:08X}".format(crc)
