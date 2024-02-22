@@ -1,4 +1,5 @@
 import simpledali
+import simplemseed3
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -40,10 +41,10 @@ async def send_test_mseed(dali):
     shortData = array("h")  # shorts
     for i in range(numsamples):
         shortData.append(i)
-    msh = simpledali.MiniseedHeader(
+    msh = simplemseed3.MiniseedHeader(
         network, station, location, channel, starttime, numsamples, sampleRate
     )
-    msr = simpledali.MiniseedRecord(msh, shortData)
+    msr = simplemseed3.MiniseedRecord(msh, shortData)
     print(f"before writeMSeed {starttime.isoformat()}")
     sendResult = await dali.writeMSeed(msr)
     print(f"writemseed resp {sendResult}")

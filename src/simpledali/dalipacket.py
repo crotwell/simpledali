@@ -1,4 +1,5 @@
-from .fdsnsourceid import FDSNSourceId, FDSN_PREFIX
+
+from simplemseed3 import FDSNSourceId, FDSN_PREFIX
 
 JSON_TYPE = "JSON"
 BZ2_JSON_TYPE = "BZJSON"

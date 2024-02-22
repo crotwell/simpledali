@@ -1,4 +1,5 @@
 import simpledali
+import simplemseed3
 import asyncio
 import bz2
 import json
@@ -24,7 +25,7 @@ async def stream_data(dali, max=0):
         count += 1
         print(f"Got Dali packet: {daliPacket}")
         if daliPacket.streamIdType() == simpledali.MSEED_TYPE:
-            msr = simpledali.miniseed.unpackMiniseedRecord(daliPacket.data)
+            msr = simplemseed3.miniseed.unpackMiniseedRecord(daliPacket.data)
             print(f"    MSeed: {msr}")
         elif daliPacket.streamIdType() == simpledali.JSON_TYPE:
             print(f"    JSON: {daliPacket.data.decode('utf-8')}")
