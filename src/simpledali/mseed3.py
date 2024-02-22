@@ -322,7 +322,7 @@ class MSeed3Record:
             encode_name = "Opaque data"
         return encode_name
 
-    def details(self, showExtraHeaders=True):
+    def details(self, showExtraHeaders=True, showData=False):
 
         encode_name = self.encodingName()
 
@@ -355,7 +355,7 @@ class MSeed3Record:
         if showExtraHeaders and self.hasExtraHeaders():
             ehLines = json.dumps(self.eh, indent=2).split("\n")
         indentLines = "\n          ".join(ehLines);
-        return f"""
+        out = f"""
           {self.identifier}, version {self.header.publicationVersion}, {self.getSize()} bytes (format: {self.header.formatVersion})
                        start time: {isoWZ(self.starttime)} ({self.header.dayOfYear:03})
                 number of samples: {self.header.numSamples}
@@ -366,7 +366,20 @@ class MSeed3Record:
               data payload length: {self.header.dataLength} bytes
                  payload encoding: {encode_name} (val: {self.header.encoding})
                     extra headers: {indentLines}
-"""
+                    """
+        if showData:
+            out = out + "data: \n"
+            line = ""
+            data = self.decompress()
+            for i in range(self.header.numSamples):
+                line += " {:<8}".format(data[i])
+                if i % 10 == 9:
+                    line += "\n"
+                    out += line
+                    line = ""
+            if len(line) > 0:
+                out += line
+        return out
 
 def unpackMSeed3FixedHeader(recordBytes):
     if len(recordBytes) < FIXED_HEADER_SIZE:
