@@ -1,11 +1,45 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "simpledali"
+dynamic = ["version"]
+authors = [
+  {name="Philip Crotwell", email = "crotwell@seis.sc.edu"}
 ]
-build-backend = "setuptools.build_meta"
+description = "Datalink protocol in python"
+readme = "README.md"
+keywords = ["miniseed", "miniseed3", "seed", "steim1", "steim2", "fdsn", "sourceid"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.9"
+dependencies = [
+    "simplemseed",
+    "defusedxml",
+    "jwt",
+    "websockets",
+    'tomli >= 1.1.0 ; python_version < "3.11"',
+    'importlib-metadata; python_version<"3.10"',
+]
+
+[project.urls]
+Homepage = "https://github.com/crotwell/simpledali"
+Documentation = "https://readthedocs.org"
+Repository = "https://github.com/crotwell/simpledali"
+Issues = "https://github.com/crotwell/simpledali/issues"
+
+[project.scripts]
+dali2jsonl = "simpledali.dali2jsonl:main"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.hatch.version]
+path = "src/simpledali/__init__.py"
