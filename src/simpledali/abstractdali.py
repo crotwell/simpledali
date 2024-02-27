@@ -134,6 +134,9 @@ class DataLink(ABC):
         return r
 
     async def writeMSeed(self, msr):
+        """
+        Write a miniseed2 packet
+        """
         streamid = nslcToStreamId(msr.header.network,
                                   msr.header.station,
                                   msr.header.location,
@@ -148,6 +151,23 @@ class DataLink(ABC):
                 )
             )
         r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack())
+        return r
+
+    async def writeMSeed3(self, ms3):
+        """
+        Write a miniseed3 packet
+        """
+        streamid = fdsnSourceIdToStreamId(ms3.identifier,
+                                  MSEED3_TYPE)
+        hpdatastart = datetimeToHPTime(ms3.starttime)
+        hpdataend = datetimeToHPTime(ms3.endtime)
+        if self.verbose:
+            print(
+                "simpleDali.writeMSeed3 {} {} {}".format(
+                    streamid, hpdatastart, hpdataend
+                )
+            )
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, ms3.pack())
         return r
 
     async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage):

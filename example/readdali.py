@@ -1,5 +1,5 @@
 import simpledali
-import simplemseed3
+import simplemseed
 import asyncio
 import bz2
 import json
@@ -25,8 +25,11 @@ async def stream_data(dali, max=0):
         count += 1
         print(f"Got Dali packet: {daliPacket}")
         if daliPacket.streamIdType() == simpledali.MSEED_TYPE:
-            msr = simplemseed3.miniseed.unpackMiniseedRecord(daliPacket.data)
+            msr = simplemseed.unpackMiniseedRecord(daliPacket.data)
             print(f"    MSeed: {msr}")
+        elif daliPacket.streamIdType() == simpledali.MSEED3_TYPE:
+            ms3 = simplemseed.unpackMSeed3Record(daliPacket.data)
+            print(f"    MSeed3: {ms3}")
         elif daliPacket.streamIdType() == simpledali.JSON_TYPE:
             print(f"    JSON: {daliPacket.data.decode('utf-8')}")
         elif daliPacket.streamIdType() == simpledali.BZ2_JSON_TYPE:
@@ -112,7 +115,7 @@ async def main(host, port, verbose=False):
 
         # set regex match pattern, really important on high volume server
         # to avoid getting way to much data
-        await dali.match("^XX_.*")
+        await dali.match("^XX.*")
         # stream data
         await stream_data(dali, max=5)
         # dali will be closed automatically here by "async with"

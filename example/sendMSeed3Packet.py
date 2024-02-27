@@ -1,5 +1,5 @@
 import simpledali
-import simplemseed
+from  simplemseed import MSeed3Header, MSeed3Record
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -35,24 +35,28 @@ async def send_test_mseed(dali):
     station = "TEST"
     location = "00"
     channel = "HNZ"
-    starttime = simpledali.utcnowWithTz()
     numsamples = 100
     sampleRate = 200
+    recordtimerange = timedelta(seconds=(numsamples-1)/sampleRate)
+    starttime = simpledali.utcnowWithTz() - recordtimerange
     shortData = array("h")  # shorts
     for i in range(numsamples):
         shortData.append(i)
-    msh = simplemseed.MiniseedHeader(
-        network, station, location, channel, starttime, numsamples, sampleRate
-    )
-    msr = simplemseed.MiniseedRecord(msh, shortData)
-    print(f"before writeMSeed {starttime.isoformat()}")
-    sendResult = await dali.writeMSeed(msr)
+
+    header = MSeed3Header()
+    header.starttime = starttime
+    header.sampleRatePeriod = sampleRate
+    identifier = "FDSN:XX2024_REALFAKE_01234567_H_HRQ_Z"
+    ms3record = MSeed3Record(header, identifier, shortData)
+
+    print(f"before writeMSeed3 {ms3record.identifier} {starttime.isoformat()}")
+    sendResult = await dali.writeMSeed3(ms3record)
     print(f"writemseed resp {sendResult}")
 
 
 async def main():
     numSend = 1
-    verbose = False
+    verbose = True
     programname = "simpleDali"
     username = "dragrace"
     processid = 0
