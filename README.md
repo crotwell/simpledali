@@ -5,6 +5,9 @@
 
 Datalink in pure python.
 
+Read the docs at [readthedocs](https://readthedocs.org/projects/simpledali/)
+
+
 Datalink is a protocol for near-realtime transfer of seismic data, usually in miniseed, but has flexibility to carry any payload such as JSON. The Protocol is defined at
 https://iris-edu.github.io/libdali/datalink-protocol.html
 
