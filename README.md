@@ -1,6 +1,7 @@
 # simpledali
 
 [![PyPI](https://img.shields.io/pypi/v/simpledali)](https://pypi.org/project/simpledali/)
+[![Documentation Status](https://readthedocs.org/projects/simpledali/badge/?version=latest)](https://simpledali.readthedocs.io/en/latest/?badge=latest)
 
 Datalink in pure python.
 
