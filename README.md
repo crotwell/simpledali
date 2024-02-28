@@ -79,4 +79,5 @@ write='/data/scsn/www/jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
 
 # Example
 
-There are examples of sending and receiving Datalink packets in the example directory.
+There are examples of sending and receiving Datalink packets in the
+[example directory](https://github.com/crotwell/simplemseed/tree/main/examples).
