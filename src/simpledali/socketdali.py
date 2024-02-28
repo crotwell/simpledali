@@ -4,6 +4,13 @@ import asyncio
 
 
 class SocketDataLink(DataLink):
+    """
+    A DataLink over a normal socket.
+
+    This uses a port number often specified in ringservers's conf as a
+    DataLinkPort, but can also be specified as a ListenPort as long as it
+    includes all or DataLink as the type.
+    """
     def __init__(self, host, port, packet_size=-1, verbose=False):
         super(SocketDataLink, self).__init__(packet_size=packet_size, verbose=verbose)
         self.host = host

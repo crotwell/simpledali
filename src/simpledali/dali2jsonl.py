@@ -27,7 +27,9 @@ Allowed_Flags = ["n", "s", "l", "c", "Y", "j", "H"]
 
 
 class Dali2Jsonl:
-    """Archive JSON Datalink records as JSONL."""
+    """
+    Archive JSON Datalink records as JSONL.
+    """
 
     def __init__(
         self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, websocketurl=None, verbose=False

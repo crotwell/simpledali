@@ -4,6 +4,14 @@ import asyncio
 import websockets
 
 class WebSocketDataLink(DataLink):
+    """
+    A DataLink over a websocket.
+
+    Websockets must first connect as HTTP before upgrading to web socket.
+
+    This uses a port number often specified in ringservers's conf as a
+    ListenPort as long as it includes all or HTTP as the type. 
+    """
     def __init__(self, uri, packet_size=-1, verbose=False, ping_interval=None):
         super(WebSocketDataLink, self).__init__(packet_size=packet_size, verbose=verbose)
         self.uri = uri

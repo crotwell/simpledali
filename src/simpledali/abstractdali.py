@@ -99,12 +99,21 @@ class DataLink(ABC):
 
     @abstractmethod
     async def close(self):
+        """
+        Closes the connection if open.
+        """
         pass
 
     def isQueryMode(self):
+        """
+        Returns True if the current connection is in Query mode, ie not streaming.
+        """
         return not self.isStreamMode()
 
     def isStreamMode(self):
+        """
+        Returns True if the current connection is in Stream mode.
+        """
         return self.__mode == STREAM_MODE
 
     def updateMode(self, header):
@@ -135,7 +144,10 @@ class DataLink(ABC):
 
     async def writeMSeed(self, msr):
         """
-        Write a miniseed2 packet
+        Write a datalink packet with data that is a single miniseed2 record.
+
+        Calcuates the streamid based on the headers to be:
+        <net>_<station>_<loc>_<channel>/MSEED
         """
         streamid = nslcToStreamId(msr.header.network,
                                   msr.header.station,
@@ -155,7 +167,11 @@ class DataLink(ABC):
 
     async def writeMSeed3(self, ms3):
         """
-        Write a miniseed3 packet
+        Write a datalink packet with data that is a single mseed3 record
+
+        Calcuates the streamid based on the headers to be:
+        <sid>/MSEED3
+        where <sid> is the source identifier without the leading FDSN:
         """
         streamid = fdsnSourceIdToStreamId(ms3.identifier,
                                   MSEED3_TYPE)
@@ -171,6 +187,11 @@ class DataLink(ABC):
         return r
 
     async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
+        """
+        Write a datalink packet with data that is JSON.
+
+        Usually the streamid ends with /JSON
+        """
         if self.verbose:
             print(
                 "simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend)
@@ -180,6 +201,11 @@ class DataLink(ABC):
         return r
 
     async def writeBZ2JSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
+        """
+        Write a datalink packet with data that is JSON and compressed with bzip2.
+
+        Usually the streamid ends with /BZJSON
+        """
         if self.verbose:
             print(
                 "simpleDali.writeBZ2JSON {} {} {}".format(streamid, hpdatastart, hpdataend)
@@ -231,6 +257,9 @@ class DataLink(ABC):
         return r
 
     async def id(self, programname, username, processid, architecture):
+        """
+        Send an ID command. Returns the servers id and capabilities response.
+        """
         header = "ID {}:{}:{}:{}".format(programname, username, processid, architecture)
         r = await self.writeCommand(header, None)
         if "::" in r.message:
@@ -239,11 +268,17 @@ class DataLink(ABC):
         return r
 
     async def info(self, type):
+        """
+        Send an INFO command. Returns the servers response.
+        """
         header = "INFO {}".format(type)
         r = await self.writeCommand(header, None)
         return r
 
     async def positionSet(self, packetId, packetTime=None):
+        """
+        Send a POSITION SET command to the given packetId, optionally with a time.
+        """
         if packetTime is None:
             hpdatastart = ""
         else:
@@ -252,14 +287,23 @@ class DataLink(ABC):
         return r
 
     async def positionEarliest(self):
+        """
+        Send a POSITION SET EARLIEST command.
+        """
         r = await self.positionSet("EARLIEST")
         return r
 
     async def positionLatest(self):
+        """
+        Send a POSITION SET LATEST command.
+        """
         r = await self.positionSet("LATEST")
         return r
 
     async def positionAfter(self, time):
+        """
+        Send a POSITION AFTER command with the given time.
+        """
         hpdatastart = int(time.timestamp() * MICROS)
         r = await self.positionAfterHPTime(hpdatastart)
         return r
@@ -269,10 +313,16 @@ class DataLink(ABC):
         return r
 
     async def match(self, pattern):
+        """
+        Send a MATCH command with the given regular expression pattern.
+        """
         r = await self.writeCommand("MATCH", pattern)
         return r
 
     async def reject(self, pattern):
+        """
+        Send a REJECT command with the given regular expression pattern.
+        """
         r = await self.writeCommand("REJECT", pattern)
         return r
 
@@ -300,6 +350,10 @@ class DataLink(ABC):
             return r
 
     async def stream(self):
+        """
+        Switch to streaming mode. The server will begin sending packets based
+        on the configuration previously set.
+        """
         if not self.isStreamMode():
             await self.startStream()
         try:
@@ -327,7 +381,9 @@ class DataLink(ABC):
             await self.auth(self.token)
 
     async def parsedInfoStatus(self):
-        """realy simple parsing of info status xml into dict"""
+        """
+        Realy simple parsing of info status xml into dict
+        """
         infoResponse = await self.info("STATUS")
         if infoResponse.type != "INFO" or infoResponse.value != "STATUS":
             raise DaliException(
@@ -344,6 +400,9 @@ class DataLink(ABC):
         return out
 
     def parse_capabilities(self, cap):
+        """
+        Realy simple parsing of INFO capabilities xml into dict
+        """
         items = cap.split()
         out = {}
         for i in items:
@@ -363,7 +422,9 @@ class DataLink(ABC):
         return out
 
     async def parsedInfoStreams(self):
-        """realy simple parsing of info streams xml into dict"""
+        """
+        Really simple parsing of INFO streams xml into dict
+        """
         streamsResponse = await self.info("STREAMS")
         if streamsResponse.type != "INFO" or streamsResponse.value != "STREAMS":
             raise DaliException(

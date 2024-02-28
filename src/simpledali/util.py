@@ -5,22 +5,38 @@ MICROS = 1000000
 
 
 def datetimeToHPTime(time):
+    """
+    Convert a datatime.datetime to a datalink hptime
+    """
     hptime = int(time.timestamp() * MICROS)
     return hptime
 
 
 def hptimeToDatetime(hptime):
+    """
+    Convert a datalink hptime to a datatime.datetime
+    """
     dt = datetime.fromtimestamp(float(hptime) / MICROS, timezone.utc)
     return dt
 
 
 def utcnowWithTz():
+    """
+    Create a datetime to the current time with the timezone set to utc.
+    """
     return datetime.now(timezone.utc)
 
 def isowithz(dt):
+    """
+    A ISO8601 string for the given datatime, but with the timezone set to Z
+    instead of +00:00
+    """
     return dt.isoformat().replace('+00:00', 'Z')
 
 def hptimeAsIso(hptime):
+    """
+    Convert an hptime into an ISO8601 string with Z timezone
+    """
     return isowithz(hptimeToDatetime(hptime).isoformat())
 
 
@@ -48,6 +64,7 @@ INFO_CAPABILITIES = "Capabilities"
 INFO_STATUS = "Status"
 INFO_STREAMLIST= "StreamList"
 INFO_STREAM= "Stream"
+
 def prettyPrintInfo(info):
     out = ""
     if INFO_VERSION in info:
