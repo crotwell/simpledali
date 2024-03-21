@@ -1,5 +1,5 @@
 import simpledali
-from  simplemseed import MSeed3Header, MSeed3Record
+from  simplemseed import MSeed3Header, MSeed3Record, FDSNSourceId
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -46,7 +46,7 @@ async def send_test_mseed(dali):
     header = MSeed3Header()
     header.starttime = starttime
     header.sampleRatePeriod = sampleRate
-    identifier = "FDSN:XX2024_REALFAKE_01234567_H_HRQ_Z"
+    identifier = FDSNSourceId.createUnknown(header.sampleRate, sourceCode="XQX")
     ms3record = MSeed3Record(header, identifier, shortData)
 
     print(f"before writeMSeed3 {ms3record.identifier} {starttime.isoformat()}")
