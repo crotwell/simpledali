@@ -30,11 +30,11 @@ async def init_dali(
     return dali
 
 
-async def send_test_mseed(dali):
+async def send_test_mseed(dali, component):
     network = "XX"
     station = "TEST"
     location = "00"
-    channel = "HNZ"
+    channel = f"HN{component}"
     starttime = simpledali.utcnowWithTz()
     numsamples = 100
     sampleRate = 200
@@ -45,13 +45,13 @@ async def send_test_mseed(dali):
         network, station, location, channel, starttime, numsamples, sampleRate
     )
     msr = simplemseed.MiniseedRecord(msh, shortData)
-    print(f"before writeMSeed {starttime.isoformat()}")
+    print(f"before writeMSeed {starttime.isoformat()} {msr.codes()}")
     sendResult = await dali.writeMSeed(msr)
     print(f"writemseed resp {sendResult}")
 
 
 async def main():
-    numSend = 1
+    numSend = 3
     verbose = False
     programname = "simpleDali"
     username = "dragrace"
@@ -62,7 +62,8 @@ async def main():
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Resp: {serverId}")
         for i in range(numSend):
-            await send_test_mseed(dali)
+            for component in ['X', 'Y', 'Z']:
+                await send_test_mseed(dali, component)
             await asyncio.sleep(1)
 
 
