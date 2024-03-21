@@ -1,7 +1,8 @@
-from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE
-from .dalipacket import DaliPacket, DaliResponse
-import asyncio
+
 import websockets
+
+from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE
+from .dalipacket import DaliPacket, DaliResponse, DaliException
 
 class WebSocketDataLink(DataLink):
     """
@@ -10,10 +11,10 @@ class WebSocketDataLink(DataLink):
     Websockets must first connect as HTTP before upgrading to web socket.
 
     This uses a port number often specified in ringservers's conf as a
-    ListenPort as long as it includes all or HTTP as the type. 
+    ListenPort as long as it includes all or HTTP as the type.
     """
     def __init__(self, uri, packet_size=-1, verbose=False, ping_interval=None):
-        super(WebSocketDataLink, self).__init__(packet_size=packet_size, verbose=verbose)
+        super().__init__(packet_size=packet_size, verbose=verbose)
         self.uri = uri
         self.ws = None
         self.ping_interval = ping_interval
@@ -24,7 +25,7 @@ class WebSocketDataLink(DataLink):
             print(f"connect {self.uri}")
         self.ws = await websockets.connect(self.uri, ping_interval=self.ping_interval)
         if self.verbose:
-            print("Websocket connect to {}".format(self.uri))
+            print(f"Websocket connect to {self.uri}")
 
     async def send(self, header, data):
         try:
@@ -33,11 +34,10 @@ class WebSocketDataLink(DataLink):
                     # no need to reopen conn just to endstream
                     self.updateMode(header)
                     return
-                else:
-                    await self.reconnect()
+                await self.reconnect()
             h = header.encode("UTF-8")
             if len(h) > 255:
-                raise DaliException("header lengh must be <= 255, {}".format(len(h)))
+                raise DaliException(f"header lengh must be <= 255, {len(h)}")
             pre = "DL"
             sendBytesLen = 3 + len(h)
             if data:
@@ -50,10 +50,10 @@ class WebSocketDataLink(DataLink):
             if data:
                 sendBytes[len(h) + 3 :] = data
                 if self.verbose:
-                    print("send data of size {:d}".format(len(data)))
+                    print(f"send data of size {len(data):d}")
             out = await self.ws.send(bytes(sendBytes))
             if self.verbose:
-                print("sent {}{} {}".format(pre, len(h), header))
+                print(f"sent {pre}{len(h)} {header}")
             self.updateMode(header)
             return out
         except:
@@ -72,22 +72,20 @@ class WebSocketDataLink(DataLink):
             else:
                 if self.verbose:
                     print(
-                        "did not receive DL from read pre {:d}{:d}{:d}".format(
-                            response[0], response[1], response[2]
-                        )
+                        f"did not receive DL from read pre {response[0]:d}{response[1]:d}{response[2]:d}"
                     )
                 await self.close()
                 raise DaliException("did not receive DL from read pre")
             h = response[3 : hSize + 3]
             header = h.decode("utf-8")
-            type = None
+            packettype = None
             value = None
             message = None
             if self.verbose:
-                print("parseRespone header: {}".format(h))
+                print(f"parseRespone header: {h}")
             if header.startswith("PACKET "):
                 s = header.split(" ")
-                type = s[0]
+                packettype = s[0]
                 streamId = s[1]
                 packetId = s[2]
                 packetTime = s[3]
@@ -96,7 +94,7 @@ class WebSocketDataLink(DataLink):
                 dSize = int(s[6])
                 data = response[hSize + 3 :]
                 return DaliPacket(
-                    type,
+                    packettype,
                     streamId,
                     packetId,
                     packetTime,
@@ -105,30 +103,30 @@ class WebSocketDataLink(DataLink):
                     dSize,
                     data,
                 )
-            elif header.startswith("ID "):
+            if header.startswith("ID "):
                 s = header.split(" ")
-                type = s[0]
+                packettype = s[0]
                 value = ""
                 message = header[3:]
-            elif (
+                return DaliResponse(packettype, value, message)
+            if (
                 header.startswith("INFO ")
                 or header.startswith("OK ")
                 or header.startswith("ERROR ")
             ):
                 s = header.split(" ")
-                type = s[0]
+                packettype = s[0]
                 value = s[1]
                 dSize = int(s[2])
                 m = response[hSize + 3 :]
                 message = m.decode("utf-8")
-                return DaliResponse(type, value, message)
-            elif header == "ENDSTREAM":
-                type = header
-            else:
-                raise DaliException(
-                    f"Header does not start with INFO, ID, PACKET, ENDSTREAM, OK or ERROR: {header}",
-                )
-            return DaliResponse(type, value, message)
+                return DaliResponse(packettype, value, message)
+            if header == "ENDSTREAM":
+                packettype = header
+                return DaliResponse(packettype, value, message)
+            raise DaliException(
+                f"Header does not start with INFO, ID, PACKET, ENDSTREAM, OK or ERROR: {header}",
+            )
         except:
             await self.close()
             raise

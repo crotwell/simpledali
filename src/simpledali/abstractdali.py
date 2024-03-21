@@ -1,12 +1,8 @@
 from abc import ABC, abstractmethod
-import asyncio
 import bz2
 import json
-from datetime import datetime, timedelta, timezone
 import defusedxml.ElementTree
 from .dalipacket import (
-    DaliPacket,
-    DaliResponse,
     DaliException,
     nslcToStreamId,
     fdsnSourceIdToStreamId,
@@ -102,7 +98,6 @@ class DataLink(ABC):
         """
         Closes the connection if open.
         """
-        pass
 
     def isQueryMode(self):
         """
@@ -128,9 +123,7 @@ class DataLink(ABC):
             raise DaliException(
                 f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}"
             )
-        header = "WRITE {} {:d} {:d} {} {:d}".format(
-            streamid, hpdatastart, hpdataend, flags, len(data)
-        )
+        header = f"WRITE {streamid} {hpdatastart:d} {hpdataend:d} {flags} {len(data):d}"
         r = await self.send(header, data)
         return r
 
@@ -158,9 +151,7 @@ class DataLink(ABC):
         hpdataend = datetimeToHPTime(msr.endtime())
         if self.verbose:
             print(
-                "simpleDali.writeMSeed {} {} {}".format(
-                    streamid, hpdatastart, hpdataend
-                )
+                f"simpleDali.writeMSeed {streamid} {hpdatastart} {hpdataend}"
             )
         r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack())
         return r
@@ -179,9 +170,7 @@ class DataLink(ABC):
         hpdataend = datetimeToHPTime(ms3.endtime)
         if self.verbose:
             print(
-                "simpleDali.writeMSeed3 {} {} {}".format(
-                    streamid, hpdatastart, hpdataend
-                )
+                f"simpleDali.writeMSeed3 {streamid} {hpdatastart} {hpdataend}"
             )
         r = await self.writeAck(streamid, hpdatastart, hpdataend, ms3.pack())
         return r
@@ -194,7 +183,7 @@ class DataLink(ABC):
         """
         if self.verbose:
             print(
-                "simpleDali.writeJSON {} {} {}".format(streamid, hpdatastart, hpdataend)
+                f"simpleDali.writeJSON {streamid} {hpdatastart} {hpdataend}"
             )
         jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
         r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray)
@@ -208,7 +197,7 @@ class DataLink(ABC):
         """
         if self.verbose:
             print(
-                "simpleDali.writeBZ2JSON {} {} {}".format(streamid, hpdatastart, hpdataend)
+                f"simpleDali.writeBZ2JSON {streamid} {hpdatastart} {hpdataend}"
             )
         jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
         compressedJson = bz2.compress(jsonAsByteArray)
@@ -219,11 +208,11 @@ class DataLink(ABC):
 
     async def writeCommand(self, command, dataString=None):
         if self.verbose:
-            print("writeCommand: cmd: {} dataStr: {}".format(command, dataString))
+            print(f"writeCommand: cmd: {command} dataStr: {dataString}")
         dataBytes = None
         if dataString:
             dataBytes = dataString.encode("UTF-8")
-            header = "{} {}".format(command, len(dataBytes))
+            header = f"{command} {len(dataBytes)}"
         else:
             header = command
         await self.send(header, dataBytes)
@@ -232,8 +221,7 @@ class DataLink(ABC):
             if self.isClosed():
                 self.__mode = QUERY_MODE
             raise DaliException(f"Write {command} failed", r)
-        else:
-            return r
+        return r
 
     async def auth(self, token):
         """
@@ -243,10 +231,10 @@ class DataLink(ABC):
         """
         self.token = token
         if self.verbose:
-            print("simpleDali.auth {} ".format(token))
+            print(f"simpleDali.auth {token} ")
         if isinstance(token, str):
             token = token.encode("utf-8")
-        header = "AUTHORIZATION {:d}".format(len(token))
+        header = f"AUTHORIZATION {len(token):d}"
         r = await self.send(header, token)
         r = await self.parseResponse()
         if r.type == "ERROR" and r.message.startswith(
@@ -260,18 +248,18 @@ class DataLink(ABC):
         """
         Send an ID command. Returns the servers id and capabilities response.
         """
-        header = "ID {}:{}:{}:{}".format(programname, username, processid, architecture)
+        header = f"ID {programname}:{username}:{processid}:{architecture}"
         r = await self.writeCommand(header, None)
         if "::" in r.message:
             # sets packet_size
             self.parse_capabilities(r.message.split("::")[1].strip())
         return r
 
-    async def info(self, type):
+    async def info(self, infotype):
         """
         Send an INFO command. Returns the servers response.
         """
-        header = "INFO {}".format(type)
+        header = f"INFO {infotype}"
         r = await self.writeCommand(header, None)
         return r
 
@@ -309,7 +297,7 @@ class DataLink(ABC):
         return r
 
     async def positionAfterHPTime(self, hpdatastart):
-        r = await self.writeCommand("POSITION AFTER {}".format(hpdatastart), None)
+        r = await self.writeCommand(f"POSITION AFTER {hpdatastart}", None)
         return r
 
     async def match(self, pattern):
@@ -327,7 +315,7 @@ class DataLink(ABC):
         return r
 
     async def read(self, packetId):
-        r = await self.writeCommand("READ {}".format(packetId), None)
+        r = await self.writeCommand(f"READ {packetId}", None)
         return r
 
     async def readEarliest(self):
@@ -336,9 +324,8 @@ class DataLink(ABC):
         r = await self.positionEarliest()
         if r.type == "OK":
             return await self.read(r.value)
-        else:
-            print(f"position did not return OK: {r}")
-            return r
+        print(f"position did not return OK: {r}")
+        return r
 
     async def readLatest(self):
         # maybe one day can
@@ -346,8 +333,7 @@ class DataLink(ABC):
         r = await self.positionLatest()
         if r.type == "OK":
             return await self.read(r.value)
-        else:
-            return r
+        return r
 
     async def stream(self):
         """
@@ -452,7 +438,6 @@ class DataLink(ABC):
                 for k, v in c.attrib.items():
                     out[c.tag][k] = self.info_typed(k, v)
 
-                else:
                     for subc in c:
                         out[c.tag][subc.tag] = {}
                         for k, v in subc.attrib.items():
@@ -463,12 +448,11 @@ class DataLink(ABC):
         try:
             if k in self.int_types:
                 return int(v)
-            elif k in self.float_types:
+            if k in self.float_types:
                 return float(v)
-            elif k in self.date_types:
+            if k in self.date_types:
                 return optional_date(v)
-            else:
-                return v
+            return v
         except:
             if self.verbose:
                 print(f"info_typed can't parse {k} {v}")

@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 """Archive JSON Datalink records as JSON Lines."""
-import os
+
 import argparse
 import bz2
 import asyncio
 import pathlib
 import re
+import sys
 
 # tomllib is std in python > 3.11 so do conditional import
 try:
@@ -13,12 +14,10 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib
 
-from .abstractdali import DataLink
-from .dalipacket import DaliPacket, DaliResponse, JSON_TYPE, BZ2_JSON_TYPE, MSEED_TYPE
-from .jsonencoder import JsonEncoder
-from .util import datetimeToHPTime, hptimeToDatetime, utcnowWithTz, encodeAuthToken
+from .dalipacket import JSON_TYPE, BZ2_JSON_TYPE
 from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
+from .util import hptimeToDatetime
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 16000
@@ -85,7 +84,7 @@ class Dali2Jsonl:
 
     async def do_dali(self, dali):
         if self.verbose:
-            print(f"Running...")
+            print("Running...")
         # very good idea to call id at start, both for logging on server
         # side and to get capabilities like packet size or write ability
         serverId = await dali.id(
@@ -100,11 +99,11 @@ class Dali2Jsonl:
         await self.stream_data(dali)
 
         if self.verbose:
-            print(f"Done.")
+            print("Done.")
 
     async def stream_data(self, dali):
         if self.verbose:
-            print(f"Stream")
+            print("Stream")
         try:
             async for daliPacket in dali.stream():
                 if self.verbose:
@@ -124,7 +123,7 @@ class Dali2Jsonl:
                         print(f"    Not JSON packet: {daliPacket.streamIdType()}")
         except asyncio.exceptions.CancelledError:
             if self.verbose:
-                print(f"Dali task cancelled")
+                print("Dali task cancelled")
             return
 
     def saveToJSONL(self, daliPacket):
@@ -146,7 +145,7 @@ class Dali2Jsonl:
         net = codes[0]
         outfile = self.fileFromPattern(net, sta, loc, chan, start)
         outfile.parent.mkdir(parents=True, exist_ok=True)
-        with open(outfile, "a") as out:
+        with open(outfile, "a", encoding="utf-8") as out:
             out.write(daliPacket.data.decode("utf-8") + "\n")
             if self.verbose:
                 print(f"   write to {outfile}")
@@ -204,32 +203,31 @@ class Dali2Jsonl:
     def configure_defaults(conf):
         if "datalink" not in conf:
             raise ValueError("[datalink] is required in configuration toml")
+        dali_conf = conf["datalink"]
+        if "programname" not in dali_conf:
+            dali_conf["programname"] = "dali2jsonl"
+        if "username" not in dali_conf:
+            dali_conf["username"] = "simpleDali"
+        if "processid" not in dali_conf:
+            dali_conf["processid"] = 0
+        if "architecture" not in dali_conf:
+            dali_conf["architecture"] = "python"
+        if "match" not in dali_conf:
+            raise ValueError("match is required in configuration toml")
+        if "websocket" not in dali_conf:
+            dali_conf["websocket"] = None
+            if "host" not in dali_conf:
+                dali_conf["host"] = DEFAULT_HOST
+            if "port" not in dali_conf:
+                dali_conf["port"] = DEFAULT_PORT
         else:
-            dali_conf = conf["datalink"]
-            if "programname" not in dali_conf:
-                dali_conf["programname"] = "dali2jsonl"
-            if "username" not in dali_conf:
-                dali_conf["username"] = "simpleDali"
-            if "processid" not in dali_conf:
-                dali_conf["processid"] = 0
-            if "architecture" not in dali_conf:
-                dali_conf["architecture"] = "python"
-            if "match" not in dali_conf:
-                raise ValueError("match is required in configuration toml")
-            if "websocket" not in dali_conf:
-                dali_conf["websocket"] = None
-                if "host" not in dali_conf:
-                    dali_conf["host"] = DEFAULT_HOST
-                if "port" not in dali_conf:
-                    dali_conf["port"] = DEFAULT_PORT
-            else:
-                dali_conf["host"] = None
-                dali_conf["port"] = None
+            dali_conf["host"] = None
+            dali_conf["port"] = None
         if "jsonl" not in conf:
             raise ValueError("[jsonl] is required in configuration toml")
-            jsonl_conf = conf["jsonl"]
-            if "write" not in jsonl_conf:
-                raise ValueError("write is required in configuration toml")
+        jsonl_conf = conf["jsonl"]
+        if "write" not in jsonl_conf:
+            raise ValueError("write is required in configuration [jsonl] toml")
 
 
 def do_parseargs():
@@ -253,7 +251,6 @@ def do_parseargs():
 
 
 def main():
-    import sys
 
     args = do_parseargs()
     conf = tomllib.load(args.conf)

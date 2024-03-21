@@ -7,19 +7,19 @@ MSEED_TYPE = "MSEED"
 MSEED3_TYPE = "MSEED3"
 
 class DaliResponse:
-    def __init__(self, type, value, message):
-        self.type = type
+    def __init__(self, packettype, value, message):
+        self.type = packettype
         self.value = value
         self.message = message
 
     def __str__(self):
-        return "type={} value={} message={}".format(self.type, self.value, self.message)
+        return f"type={self.type} value={self.value} message={self.message}"
 
 
 class DaliPacket:
     def __init__(
         self,
-        type,
+        packettype,
         streamId,
         packetId,
         packetTime,
@@ -28,7 +28,7 @@ class DaliPacket:
         dSize,
         data,
     ):
-        self.type = type
+        self.type = packettype
         self.streamId = streamId
         self.packetId = packetId
         self.packetTime = packetTime
@@ -42,18 +42,9 @@ class DaliPacket:
         s = self.streamId.split("/")
         if len(s)>1:
             return s[1]
-        else:
-            return ""
+        return ""
     def __str__(self):
-        return "{} {} {} {} {} {} {}".format(
-            self.type,
-            self.streamId,
-            self.packetId,
-            self.packetTime,
-            self.dataStartTime,
-            self.dataEndTime,
-            self.dSize,
-        )
+        return f"{self.type} {self.streamId} {self.packetId} {self.packetTime} {self.dataStartTime} {self.dataEndTime} {self.dSize}"
 
 class DaliException(Exception):
     def __init__(self, message, daliResponse=None):
@@ -63,14 +54,13 @@ class DaliException(Exception):
     def __str__(self):
         if self.daliResponse is not None:
             return f"Dali {self.daliResponse.type}: {self.daliResponse.message}"
-        else:
-            return self.message
+        return self.message
 
-def nslcToStreamId(net: str, sta: str, loc: str, chan: str, type: str) -> str:
-    return f"{net}_{sta}_{loc}_{chan}/{type}"
+def nslcToStreamId(net: str, sta: str, loc: str, chan: str, packettype: str) -> str:
+    return f"{net}_{sta}_{loc}_{chan}/{packettype}"
 
-def fdsnSourceIdToStreamId(sourceId: 'FDSNSourceId', type: str) -> str:
-    sid = sourceId.__str__()
+def fdsnSourceIdToStreamId(sourceId: 'FDSNSourceId', packettype: str) -> str:
+    sid = str(sourceId)
     if sid.startswith(FDSN_PREFIX):
         sid = sid[len(FDSN_PREFIX):]
-    return f"{sid}/{type}"
+    return f"{sid}/{packettype}"

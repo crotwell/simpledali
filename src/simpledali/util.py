@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import jwt  # pip3 install pyjwt (not jwt!!!)
 
 MICROS = 1000000
@@ -44,19 +44,18 @@ def optional_date(date_str):
     if len(date_str) < 10:
         # some date items are just `-`,
         return None
-    else:
-        # this is probably dangerous...
-        try:
-            d = date_str
-            if (len(date_str) == 19 or len(date_str) == 26) and date_str[10] == " ":
-                d = f"{date_str[0:10]}T{date_str[11:]}"
-            if d[-1] == "Z":
-                # python datetime doesn't like Z
-                d = d[:-1] + "+00:00"
-            return datetime.fromisoformat(d).replace(tzinfo=timezone.utc)
-        except:
-            print(f"Can't parse date: {date_str}")
-            return date_str
+    # this is probably dangerous...
+    try:
+        d = date_str
+        if (len(date_str) == 19 or len(date_str) == 26) and date_str[10] == " ":
+            d = f"{date_str[0:10]}T{date_str[11:]}"
+        if d[-1] == "Z":
+            # python datetime doesn't like Z
+            d = d[:-1] + "+00:00"
+        return datetime.fromisoformat(d).replace(tzinfo=timezone.utc)
+    except:
+        print(f"Can't parse date: {date_str}")
+        return date_str
 
 INFO_VERSION = "Version"
 INFO_SERVERID = "ServerID"
@@ -75,7 +74,7 @@ def prettyPrintInfo(info):
         out += f"  Capabilities: {info[INFO_CAPABILITIES]}\n"
     if INFO_STATUS in info:
         status = info[INFO_STATUS]
-        out += f"  Status:\n"
+        out +=  "  Status:\n"
         out += f"    StartTime: {isowithz(status['StartTime'])}\n"
         out += f"    RingVersion: {status['RingVersion']}\n"
         out += f"    RingSize: {status['RingSize']}\n"
@@ -100,7 +99,7 @@ def prettyPrintInfo(info):
         out += f"    LatestPacketDataEndTime: {isowithz(status['LatestPacketDataEndTime'])}\n"
     if INFO_STREAMLIST in info:
         streaminfo = info[INFO_STREAMLIST]
-        out += f"  Streams:\n"
+        out +=  "  Streams:\n"
         out += f"    TotalStreams: {streaminfo['TotalStreams']}\n"
         out += f"    SelectedStreams: {streaminfo['SelectedStreams']}\n"
         streamlist = streaminfo[INFO_STREAM]
