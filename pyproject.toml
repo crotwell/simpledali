@@ -19,7 +19,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "simplemseed >= 0.3.0",
+    "simplemseed >= 0.3.1",
     "defusedxml",
     "pyjwt",
     "websockets",
