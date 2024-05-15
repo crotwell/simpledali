@@ -84,4 +84,4 @@ write='/data/scsn/www/jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
 # Example
 
 There are examples of sending and receiving Datalink packets in the
-[example directory](https://github.com/crotwell/simplemdali/tree/main/examples).
+[example directory](https://github.com/crotwell/simpledali/tree/main/example).
