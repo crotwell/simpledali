@@ -31,10 +31,6 @@ async def init_dali(
 
 
 async def send_test_mseed(dali):
-    network = "XX"
-    station = "TEST"
-    location = "00"
-    channel = "HNZ"
     numsamples = 100
     sampleRate = 200
     recordtimerange = timedelta(seconds=(numsamples-1)/sampleRate)
