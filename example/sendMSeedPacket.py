@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from array import array
 import jwt
 from threading import Thread
+import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -50,6 +51,49 @@ async def send_test_mseed(dali, component):
     print(f"writemseed resp {sendResult}")
 
 
+async def send_steim_mseed(dali, component, encoding):
+    network = "XX"
+    station = "TEST"
+    location = "00"
+    channel = f"HN{component}"
+    starttime = simpledali.utcnowWithTz()
+    numsamples = 100
+    sampleRate = 200
+    data = np.zeros(numsamples, dtype=np.int32)
+    for i in range(len(data)):
+        data[i] = i
+    if encoding == simplemseed.seedcodec.STEIM1:
+        encData = simplemseed.EncodedDataSegment(
+            simplemseed.seedcodec.STEIM1,
+            simplemseed.encodeSteim1(data, frames=7), # 7 frames => 512 byte record
+            numsamples,
+            True)
+    elif encoding == simplemseed.seedcodec.STEIM2:
+        encData = simplemseed.EncodedDataSegment(
+            simplemseed.seedcodec.STEIM2,
+            simplemseed.encodeSteim2(data, frames=7), # 7 frames => 512 byte record
+            numsamples,
+            True)
+    else:
+        # primitive type, guess based on numpy array dtype
+        encData = simplemseed.encode(data)
+    print(f"enc data: {len(encData.dataBytes)}")
+    msh = simplemseed.MiniseedHeader(
+        network, station, location, channel, starttime, numsamples, sampleRate
+    )
+    msr = simplemseed.MiniseedRecord(msh, data=encData)
+    print(f"before writeMSeed {starttime.isoformat()} {msr.codes()} bytes: {len(msr.pack())} {msr.header.encoding}")
+    sendResult = await dali.writeMSeed(msr)
+    print(f"writemseed resp {sendResult}")
+
+async def send_several(dali, numSend, encoding=-1):
+    for i in range(numSend):
+        for component in ['X', 'Y', 'Z']:
+            #await send_test_mseed(dali, component)
+            await send_steim_mseed(dali, component, encoding)
+
+        await asyncio.sleep(1)
+
 async def main():
     numSend = 3
     verbose = False
@@ -61,10 +105,9 @@ async def main():
     # async with simpledali.WebSocketDataLink(uri, verbose=verbose) as dali:
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Resp: {serverId}")
-        for i in range(numSend):
-            for component in ['X', 'Y', 'Z']:
-                await send_test_mseed(dali, component)
-            await asyncio.sleep(1)
+
+        #await send_steim_mseed(dali, "Z", 2)
+        await send_several(dali, numSend, simplemseed.seedcodec.STEIM2)
 
 
 debug = False
