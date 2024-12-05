@@ -1,4 +1,4 @@
-__version__ = "0.8.2-SNAPSHOT"
+__version__ = "0.8.2.dev1"
 
 from .abstractdali import DataLink
 from .dalipacket import (
