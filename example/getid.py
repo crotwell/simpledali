@@ -12,12 +12,16 @@ async def main():
     processid = 0
     architecture = "python"
 
+    print()
+    print("Attempt regular socket datalink:")
     # for regular socket (DataLinkPort)
     async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Connect to {host}:{port} via regular socket")
         print(f"Socket Id: {serverId.message}")
     # for web socket (ListenPort)
+    print()
+    print("Attempt web socket datalink:")
     async with simpledali.WebSocketDataLink(uri, verbose=verbose) as dali:
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Connect to {uri} via websocket")
