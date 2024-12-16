@@ -123,24 +123,27 @@ class DataLink(ABC):
             self.__mode = STREAM_MODE
         # otherwise leave as is
 
-    async def write(self, streamid, hpdatastart, hpdataend, flags, data):
+    async def write(self, streamid, hpdatastart, hpdataend, flags, data, pktid=None):
         if self.packet_size > 0 and len(data) > self.packet_size:
             raise DaliException(
                 f"Data larger than configured max packet_size, {len(data)}>{self.packet_size}"
             )
         header = f"WRITE {streamid} {hpdatastart:d} {hpdataend:d} {flags} {len(data):d}"
+        if pktid is not None:
+            header += f" {pktid}"
+        print("write: "+header)
         r = await self.send(header, data)
         return r
 
-    async def writeAck(self, streamid, hpdatastart, hpdataend, data):
-        await self.write(streamid, hpdatastart, hpdataend, "A", data)
+    async def writeAck(self, streamid, hpdatastart, hpdataend, data, pktid=None):
+        await self.write(streamid, hpdatastart, hpdataend, "A", data, pktid=pktid)
         r = await self.parseResponse()
         if r.type == "ERROR" and r.message.startswith(NO_SOUP):
             # no write premission to ringserver, it usually closes connection
             await self.close()
         return r
 
-    async def writeMSeed(self, msr):
+    async def writeMSeed(self, msr, pktid=None):
         """
         Write a datalink packet with data that is a single miniseed2 record.
 
@@ -167,10 +170,10 @@ class DataLink(ABC):
             print(
                 f"simpleDali.writeMSeed {streamid} {hpdatastart} {hpdataend}"
             )
-        r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack())
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, msr.pack(), pktid=pktid)
         return r
 
-    async def writeMSeed3(self, ms3):
+    async def writeMSeed3(self, ms3, pktid=None):
         """
         Write a datalink packet with data that is a single mseed3 record
 
@@ -186,10 +189,10 @@ class DataLink(ABC):
             print(
                 f"simpleDali.writeMSeed3 {streamid} {hpdatastart} {hpdataend}"
             )
-        r = await self.writeAck(streamid, hpdatastart, hpdataend, ms3.pack())
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, ms3.pack(), pktid=pktid)
         return r
 
-    async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
+    async def writeJSON(self, streamid, hpdatastart, hpdataend, jsonMessage, pktid=None):
         """
         Write a datalink packet with data that is JSON.
 
@@ -200,10 +203,10 @@ class DataLink(ABC):
                 f"simpleDali.writeJSON {streamid} {hpdatastart} {hpdataend}"
             )
         jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
-        r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray)
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, jsonAsByteArray, pktid=pktid)
         return r
 
-    async def writeBZ2JSON(self, streamid, hpdatastart, hpdataend, jsonMessage):
+    async def writeBZ2JSON(self, streamid, hpdatastart, hpdataend, jsonMessage, pktid=None):
         """
         Write a datalink packet with data that is JSON and compressed with bzip2.
 
@@ -217,7 +220,7 @@ class DataLink(ABC):
         compressedJson = bz2.compress(jsonAsByteArray)
         if self.verbose:
             print(f"Bzip2 compress {len(jsonAsByteArray)} to {len(compressedJson)} bytes")
-        r = await self.writeAck(streamid, hpdatastart, hpdataend, compressedJson)
+        r = await self.writeAck(streamid, hpdatastart, hpdataend, compressedJson, pktid=pktid)
         return r
 
     async def writeCommand(self, command, dataString=None):

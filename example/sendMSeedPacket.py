@@ -47,11 +47,11 @@ async def send_test_mseed(dali, component):
     )
     msr = simplemseed.MiniseedRecord(msh, shortData)
     print(f"before writeMSeed {starttime.isoformat()} {msr.codes()}")
-    sendResult = await dali.writeMSeed(msr)
+    sendResult = await dali.writeMSeed(msr, 1001)
     print(f"writemseed resp {sendResult}")
 
 
-async def send_steim_mseed(dali, component, encoding):
+async def send_steim_mseed(dali, component, encoding, pktid=None):
     network = "XX"
     station = "TEST"
     location = "00"
@@ -82,16 +82,17 @@ async def send_steim_mseed(dali, component, encoding):
         network, station, location, channel, starttime, numsamples, sampleRate
     )
     msr = simplemseed.MiniseedRecord(msh, data=encData)
-    print(f"before writeMSeed {starttime.isoformat()} {msr.codes()} bytes: {len(msr.pack())} {msr.header.encoding}")
-    sendResult = await dali.writeMSeed(msr)
+    print(f"before writeMSeed {starttime.isoformat()} {msr.codes()} bytes: {len(msr.pack())} {msr.header.encoding} {pktid}")
+    sendResult = await dali.writeMSeed(msr, pktid)
     print(f"writemseed resp {sendResult}")
 
 async def send_several(dali, numSend, encoding=-1):
+    pktid=1001
     for i in range(numSend):
         for component in ['X', 'Y', 'Z']:
             #await send_test_mseed(dali, component)
-            await send_steim_mseed(dali, component, encoding)
-
+            await send_steim_mseed(dali, component, encoding, pktid)
+            pktid+=1
         await asyncio.sleep(1)
 
 async def main():
