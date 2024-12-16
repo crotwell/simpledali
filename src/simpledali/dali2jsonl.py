@@ -18,6 +18,7 @@ from .dalipacket import JSON_TYPE, BZ2_JSON_TYPE
 from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
 from .util import hptimeToDatetime
+from simplemseed import FDSNSourceId, FDSN_PREFIX
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 16000
@@ -131,36 +132,28 @@ class Dali2Jsonl:
         codesStr = daliPacket.streamId
         # remove "type" like /JSON
         codesStr = daliPacket.streamIdChannel()
-        codes = codesStr.split("_")
-        chan = ""
-        loc = ""
-        sta = ""
-        net = ""
-        if len(codes) > 3:
-            chan = '_'.join(codes[3:])
-        if len(codes) > 2:
-            loc = codes[2]
-        if len(codes) > 1:
-            sta = codes[1]
-        net = codes[0]
-        outfile = self.fileFromPattern(net, sta, loc, chan, start)
+        if (codesStr.startswith(FDSN_PREFIX)):
+            sid = FDSNSourceId.parse(codesStr)
+        else:
+            sid = FDSNSourceId.parse(f"{FDSN_PREFIX}{codesStr}")
+        outfile = self.fileFromSidPattern(sid, start)
         outfile.parent.mkdir(parents=True, exist_ok=True)
         with open(outfile, "a", encoding="utf-8") as out:
             out.write(daliPacket.data.decode("utf-8") + "\n")
             if self.verbose:
                 print(f"   write to {outfile}")
 
-    def fileFromPattern(self, net, sta, loc, chan, time):
-        outfile = self.fillBasePattern(net, sta, loc, chan)
+    def fileFromSidPattern(self, sid: FDSNSourceId, time):
+        outfile = self.fillBaseSidPattern(sid)
         outfile = self.fillTimePattern(outfile, time)
         return pathlib.Path(outfile)
 
-    def fillBasePattern(self, net, sta, loc, chan):
+    def fillBaseSidPattern(self, sid: FDSNSourceId):
         return (
-            self.writePattern.replace("%n", net)
-            .replace("%s", sta)
-            .replace("%l", loc)
-            .replace("%c", chan)
+            self.writePattern.replace("%n", sid.networkCode)
+            .replace("%s", sid.stationCode)
+            .replace("%l", sid.locationCode)
+            .replace("%c", sid.shortChannelCode())
         )
 
     def fillTimePattern(self, base, time):

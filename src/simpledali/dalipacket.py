@@ -59,8 +59,15 @@ class DaliException(Exception):
 def nslcToStreamId(net: str, sta: str, loc: str, chan: str, packettype: str) -> str:
     return f"{net}_{sta}_{loc}_{chan}/{packettype}"
 
-def fdsnSourceIdToStreamId(sourceId: 'FDSNSourceId', packettype: str) -> str:
+def fdsnSourceIdToStreamId(sourceId: 'FDSNSourceId', packettype: str, trimFDSN=False) -> str:
+    """
+    Generate datalink streamid from FDSN source id. For datalink 1.1, streamid
+    should be like FDSN:NN_SSSS_LL_B_S_S/TYPE but for older ringservers
+    running datalink 1.0 may be better to trim FDSN: from beginning like
+    NN_SSSS_LL_B_S_S/TYPE. Note that ringserver v4 uses datalink 1.1 style
+    stream ids.
+    """
     sid = str(sourceId)
-    if sid.startswith(FDSN_PREFIX):
+    if trimFDSN and sid.startswith(FDSN_PREFIX):
         sid = sid[len(FDSN_PREFIX):]
     return f"{sid}/{packettype}"

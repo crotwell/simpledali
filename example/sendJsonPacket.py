@@ -1,4 +1,5 @@
 import simpledali
+from simplemseed import FDSNSourceId
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -18,7 +19,12 @@ async def send_test_json(dali):
     station = "TEST"
     starttime = simpledali.utcnowWithTz()
     print(f"before writeJSON {starttime}")
-    streamid = f"{network}_{station}_00_SOH/JSON"
+    if dali.dlproto == simpledali.DLPROTO_1_0:
+        # old style
+        streamid = f"{network}_{station}_00_SOH/JSON"
+    else:
+        sid = FDSNSourceId.fromNslc(network, station,"00","SOH")
+        streamid = simpledali.fdsnSourceIdToStreamId(sid, simpledali.JSON_TYPE)
     hpdatastart = simpledali.datetimeToHPTime(starttime)
     hpdataend = hpdatastart
     jsonMessage = {

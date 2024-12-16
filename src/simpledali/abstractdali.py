@@ -14,8 +14,11 @@ from .util import (
     optional_date,
     MICROS
 )
+from simplemseed import FDSNSourceId
 
 # https://iris-edu.github.io/libdali/datalink-protocol.html
+DLPROTO_1_0 = "1.0"
+DLPROTO_1_1 = "1.1"
 
 NO_SOUP = "Write permission not granted, no soup for you!"
 
@@ -24,11 +27,13 @@ STREAM_MODE="stream"
 
 class DataLink(ABC):
     def __init__(self, packet_size=-1, verbose=False):
-        """init DataLink. Packet_size can be set, or can be acquired from the
-        server by calling either parsedInfoStatus() or info("STATUS")
+        """init DataLink. Packet_size and dlproto can be set,
+        or can be acquired from the
+        server via the capabilities response within id()
         """
         self.__mode = QUERY_MODE
         self.packet_size = packet_size
+        self.dlproto = "1.0"
         self.verbose = verbose
         self.token = None
         self.int_types = [
@@ -142,11 +147,20 @@ class DataLink(ABC):
         Calcuates the streamid based on the headers to be:
         <net>_<station>_<loc>_<channel>/MSEED
         """
-        streamid = nslcToStreamId(msr.header.network,
+        if self.dlproto == DLPROTO_1_0:
+            # old style nn_sss_ll_ccc/MSEED style
+            streamid = nslcToStreamId(msr.header.network,
                                   msr.header.station,
                                   msr.header.location,
                                   msr.header.channel,
                                   MSEED_TYPE)
+        else:
+            # new style fdsn sourceids
+            sid = FDSNSourceId.fromNslc(msr.header.network,
+                                  msr.header.station,
+                                  msr.header.location,
+                                  msr.header.channel)
+            streamid = fdsnSourceIdToStreamId(sid, MSEED_TYPE)
         hpdatastart = datetimeToHPTime(msr.starttime())
         hpdataend = datetimeToHPTime(msr.endtime())
         if self.verbose:
@@ -165,7 +179,7 @@ class DataLink(ABC):
         where <sid> is the source identifier without the leading FDSN:
         """
         streamid = fdsnSourceIdToStreamId(ms3.identifier,
-                                  MSEED3_TYPE)
+                                  MSEED3_TYPE, self.dlproto == DLPROTO_1_0)
         hpdatastart = datetimeToHPTime(ms3.starttime)
         hpdataend = datetimeToHPTime(ms3.endtime)
         if self.verbose:
@@ -247,6 +261,7 @@ class DataLink(ABC):
     async def id(self, programname, username, processid, architecture):
         """
         Send an ID command. Returns the servers id and capabilities response.
+        Also sets packet size and dlproto fields.
         """
         header = f"ID {programname}:{username}:{processid}:{architecture}"
         r = await self.writeCommand(header, None)
@@ -397,6 +412,8 @@ class DataLink(ABC):
                 out[spliti[0]] = spliti[1]
                 if spliti[0] == "PACKETSIZE":
                     self.packet_size = int(spliti[1])
+                elif spliti[0] == "DLPROTO":
+                    self.dlproto = spliti[1]
         return out
 
     def status_xml_to_dict(self, statusEl):

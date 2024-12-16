@@ -1,6 +1,10 @@
 __version__ = "0.8.2.dev1"
 
-from .abstractdali import DataLink
+from .abstractdali import (
+    DataLink,
+    DLPROTO_1_0,
+    DLPROTO_1_1,
+)
 from .dalipacket import (
     DaliPacket,
     DaliResponse,
@@ -28,6 +32,9 @@ __all__ = [
     "JSON_TYPE",
     "BZ2_JSON_TYPE",
     "MSEED_TYPE",
+    "MSEED3_TYPE",
+    "DLPROTO_1_0",
+    "DLPROTO_1_1",
     "Dali2Jsonl",
     "datetimeToHPTime",
     "hptimeToDatetime",

@@ -4,8 +4,8 @@
 host='localhost'
 # datalink port, defaults to 16000
 port=16000
-# or via websockets
-websocket='ws://localhost:16000/datalink'
+# or via websockets, ListenPort defaults to 18000
+websocket='ws://localhost:18000/datalink'
 
 # Match regular expression pattern on stream ids, ex '.*/JSON'
 # if type is /BZJSON, assumes bzip2 compress of JSON data and will

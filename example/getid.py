@@ -3,7 +3,7 @@ import simpledali
 
 async def main():
     host = "localhost"
-    port = 16000
+    port = 18000
     uri = f"ws://{host}:{port}/datalink"
     verbose = True
 

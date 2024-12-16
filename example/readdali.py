@@ -13,8 +13,7 @@ from websockets import ConnectionClosed
 
 
 host = "localhost"
-port = 16000
-uri = f"ws://{host}:{port}/datalink"
+port = 18000
 # ping_interval=5
 ping_interval = None  # to disable ping-pong until ringserver supports, this is default
 
@@ -49,6 +48,7 @@ async def main(host, port, verbose=False):
     architecture = "python"
     # async with  simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
     # or can use websockets if the server implements
+    uri = f"ws://{host}:{port}/datalink"
     async with simpledali.WebSocketDataLink(
         uri, verbose=verbose, ping_interval=ping_interval
     ) as dali:
@@ -115,7 +115,16 @@ async def main(host, port, verbose=False):
 
         # set regex match pattern, really important on high volume server
         # to avoid getting way to much data
-        await dali.match("^XX.*")
+        # format for older ringserver (dlproto 1.0) is NN_SSSSS_LL_CCC/MSEED
+        # and for new v4 ringserver (dlproto 1.1) is FDSN:NN_SSSS_LL_B_S_S/MSEED
+        # Here just limit to a single network, but station/channel codes
+        # could also be added
+        networkCode = "XX"
+        if dali.dlproto == simpledali.DLPROTO_1_0:
+            matchPattern = f"^{networkCode}_.*"
+        else:
+            matchPattern = f"FDSN:{networkCode}_.*"
+        await dali.match(matchPattern)
         # stream data
         await stream_data(dali, max=5)
         # dali will be closed automatically here by "async with"
