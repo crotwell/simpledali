@@ -132,7 +132,7 @@ class WebSocketDataLink(DataLink):
             raise
 
     def isClosed(self):
-        ans = self.ws is None or not self.ws.open
+        ans = self.ws is None or self.ws.state != websockets.protocol.State.OPEN
         if ans:
             # is socket is closed, make sure other state is updated
             self.ws = None
