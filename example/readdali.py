@@ -13,7 +13,7 @@ from websockets import ConnectionClosed
 
 
 host = "localhost"
-port = 18000
+port = 16000
 # ping_interval=5
 ping_interval = None  # to disable ping-pong until ringserver supports, this is default
 
