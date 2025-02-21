@@ -66,7 +66,16 @@ async def main(host, port, verbose=False):
 
         # set regex match pattern, really important on high volume server
         # to avoid getting way to much data and too many info streams
-        await dali.match("^XX_.*")
+        # older ringserver (DLPROTO 1.0) uses N_S_L_C style
+        # ringserver4 (DLPROTO 1.1) uses FDSN SourceIds and autopromotes /MSEED
+        # packets ids to FDSN:
+        if dali.dlproto == simpledali.DLPROTO_1_0:
+            # old style
+            matchPat = "^XX_.*"
+        else:
+            # new style
+            matchPat = "^FDSN:XX_.*"
+        await dali.match(matchPat)
 
         infoStreams = await dali.parsedInfoStreams()
         print(
