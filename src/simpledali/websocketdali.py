@@ -118,6 +118,10 @@ class WebSocketDataLink(DataLink):
             raise DaliException(
                 f"Header does not start with INFO, ID, PACKET, ENDSTREAM, OK or ERROR: {header}",
             )
+        except websockets.exceptions.ConnectionClosedError as e:
+            # ringserver v4 doesn't gracefully close connections
+            logging.warning("Server did not gracefully close websocket: ", exc_info=e)
+            self._force_close()
         except:
             await self.close()
             raise
@@ -133,5 +137,12 @@ class WebSocketDataLink(DataLink):
     async def close(self):
         if self.ws is not None:
             await self.ws.close()
-            self.ws = None
+        self._force_close()
+
+    def _force_close(self):
+        """
+        Unset websocket and reset mode. This should be not be called, prefer
+        close() as it does the websocket close handshake.
+        """
+        self.ws = None
         self.__mode = QUERY_MODE
