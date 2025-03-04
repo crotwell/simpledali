@@ -22,10 +22,10 @@ class WebSocketDataLink(DataLink):
     async def createDaliConnection(self):
         await self.close()
         if self.verbose:
-            print(f"connect {self.uri}")
+            print(f"connecting {self.uri}")
         self.ws = await websockets.connect(self.uri, ping_interval=self.ping_interval)
         if self.verbose:
-            print(f"Websocket connect to {self.uri}")
+            print(f"Websocket connected to {self.uri}")
 
     async def send(self, header, data):
         try:
@@ -49,11 +49,7 @@ class WebSocketDataLink(DataLink):
             sendBytes[3 : len(h) + 3] = h
             if data:
                 sendBytes[len(h) + 3 :] = data
-                if self.verbose:
-                    print(f"send data of size {len(data):d}")
             out = await self.ws.send(bytes(sendBytes))
-            if self.verbose:
-                print(f"sent {pre}{len(h)} {header}")
             self.updateMode(header)
             return out
         except:
@@ -70,19 +66,14 @@ class WebSocketDataLink(DataLink):
             if response[0] == 68 and response[1] == 76:
                 hSize = response[2]
             else:
-                if self.verbose:
-                    print(
-                        f"did not receive DL from read pre {response[0]:d}{response[1]:d}{response[2]:d}"
-                    )
                 await self.close()
-                raise DaliException("did not receive DL from read pre")
+                raise DaliException("did not receive DL from read " \
+                                    f"{response[0]:d}{response[1]:d}{response[2]:d}")
             h = response[3 : hSize + 3]
             header = h.decode("utf-8")
             packettype = None
             value = None
             message = None
-            if self.verbose:
-                print(f"parseRespone header: {h}")
             if header.startswith("PACKET "):
                 s = header.split(" ")
                 packettype = s[0]

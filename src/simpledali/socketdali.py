@@ -21,7 +21,7 @@ class SocketDataLink(DataLink):
     async def createDaliConnection(self):
         await self.close()
         if self.verbose:
-            print(f"connect {self.host}:{self.port}")
+            print(f"connecting {self.host}:{self.port}")
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
     async def send(self, header, data):
@@ -37,20 +37,10 @@ class SocketDataLink(DataLink):
             self.writer.write(pre.encode("UTF-8"))
             lenByte = len(h).to_bytes(1, byteorder="big", signed=False)
             self.writer.write(lenByte)
-            if self.verbose:
-                print(
-                    f"send pre {pre} as {pre.encode('UTF-8')}{lenByte[0]:d}"
-                )
             self.writer.write(h)
-            if self.verbose:
-                print(f"send head {header}")
             if data:
                 self.writer.write(data)
-                if self.verbose:
-                    print(f"send data of size {len(data):d}")
             out = await self.writer.drain()
-            if self.verbose:
-                print("drained")
             self.updateMode(header)
             return out
         except:
@@ -66,18 +56,13 @@ class SocketDataLink(DataLink):
             if pre[0] == 68 and pre[1] == 76:
                 hSize = pre[2]
             else:
-                if self.verbose:
-                    print(
-                        "did not receive DL from read pre {pre[0]:d}{pre[1]:d}{pre[2]:d}"
-                    )
                 await self.close()
-                raise DaliException("did not receive DL from read pre")
+                raise DaliException(f"did not receive DL from read pre {pre[0]:d}{pre[1]:d}{pre[2]:d}")
             h = await self.reader.readexactly(hSize)
             header = h.decode("utf-8")
             packettype = None
             value = None
             message = None
-            # if self.verbose: print("parseRespone header: {}".format(h))
             if header.startswith("PACKET "):
                 s = header.split(" ")
                 packettype = s[0]

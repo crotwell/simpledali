@@ -131,7 +131,6 @@ class DataLink(ABC):
         header = f"WRITE {streamid} {hpdatastart:d} {hpdataend:d} {flags} {len(data):d}"
         if pktid is not None:
             header += f" {pktid}"
-        print("write: "+header)
         r = await self.send(header, data)
         return r
 
@@ -218,8 +217,6 @@ class DataLink(ABC):
             )
         jsonAsByteArray = json.dumps(jsonMessage).encode("UTF-8")
         compressedJson = bz2.compress(jsonAsByteArray)
-        if self.verbose:
-            print(f"Bzip2 compress {len(jsonAsByteArray)} to {len(compressedJson)} bytes")
         r = await self.writeAck(streamid, hpdatastart, hpdataend, compressedJson, pktid=pktid)
         return r
 
@@ -342,8 +339,7 @@ class DataLink(ABC):
         r = await self.positionEarliest()
         if r.type == "OK":
             return await self.read(r.value)
-        print(f"position did not return OK: {r}")
-        return r
+        raise DaliException(f"position did not return OK: {r}")
 
     async def readLatest(self):
         # maybe one day can
