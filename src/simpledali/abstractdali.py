@@ -104,6 +104,12 @@ class DataLink(ABC):
         Closes the connection if open.
         """
 
+    @abstractmethod
+    def _force_close(self):
+        """
+        Closes the connection forcefully, without any closing handshake.
+        """
+
     def isQueryMode(self):
         """
         Returns True if the current connection is in Query mode, ie not streaming.

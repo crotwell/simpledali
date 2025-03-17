@@ -2,7 +2,7 @@
 import websockets
 
 from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE
-from .dalipacket import DaliPacket, DaliResponse, DaliException
+from .dalipacket import DaliPacket, DaliResponse, DaliException, DaliClosed
 
 class WebSocketDataLink(DataLink):
     """
@@ -28,13 +28,10 @@ class WebSocketDataLink(DataLink):
             print(f"Websocket connected to {self.uri}")
 
     async def send(self, header, data):
+        if self.isClosed():
+            self._force_close()
+            raise DaliClosed("Connection is closed")
         try:
-            if self.isClosed():
-                if header == "ENDSTREAM":
-                    # no need to reopen conn just to endstream
-                    self.updateMode(header)
-                    return
-                await self.reconnect()
             h = header.encode("UTF-8")
             if len(h) > 255:
                 raise DaliException(f"header lengh must be <= 255, {len(h)}")
@@ -59,7 +56,7 @@ class WebSocketDataLink(DataLink):
     async def parseResponse(self):
         try:
             if self.isClosed():
-                raise DaliException("Connection is closed")
+                raise DaliClosed("Connection is closed")
             response = await self.ws.recv()
             # pre header
             # D ==> 68, L ==> 76
@@ -122,6 +119,10 @@ class WebSocketDataLink(DataLink):
             # ringserver v4 doesn't gracefully close connections
             logging.warning("Server did not gracefully close websocket: ", exc_info=e)
             self._force_close()
+            raise DaliClosed("Connection is closed") from e
+        except websockets.exceptions.ConnectionClosed as e:
+            self._force_close()
+            raise DaliClosed("Connection is closed") from e
         except:
             await self.close()
             raise
@@ -130,8 +131,7 @@ class WebSocketDataLink(DataLink):
         ans = self.ws is None or self.ws.state != websockets.protocol.State.OPEN
         if ans:
             # is socket is closed, make sure other state is updated
-            self.ws = None
-            self.__mode = QUERY_MODE
+            self._force_close()
         return ans
 
     async def close(self):

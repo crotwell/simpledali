@@ -1,7 +1,7 @@
 import asyncio
 
 from .abstractdali import DataLink, QUERY_MODE
-from .dalipacket import DaliPacket, DaliResponse, DaliException
+from .dalipacket import DaliPacket, DaliResponse, DaliException, DaliClosed
 
 class SocketDataLink(DataLink):
     """
@@ -25,15 +25,12 @@ class SocketDataLink(DataLink):
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
     async def send(self, header, data):
+        h = header.encode("UTF-8")
+        pre = "DL"
+        if self.isClosed():
+            self._force_close()
+            raise DaliClosed("Connection is closed")
         try:
-            h = header.encode("UTF-8")
-            pre = "DL"
-            if self.isClosed():
-                if header == "ENDSTREAM":
-                    # no need to reopen conn just to endstream
-                    self.updateMode(header)
-                    return
-                await self.reconnect()
             self.writer.write(pre.encode("UTF-8"))
             lenByte = len(h).to_bytes(1, byteorder="big", signed=False)
             self.writer.write(lenByte)
@@ -50,7 +47,7 @@ class SocketDataLink(DataLink):
     async def parseResponse(self):
         try:
             if self.isClosed():
-                raise DaliException("Connection is closed")
+                raise DaliClosed("Connection is closed")
             pre = await self.reader.readexactly(3)
             # D ==> 68, L ==> 76
             if pre[0] == 68 and pre[1] == 76:
@@ -106,6 +103,9 @@ class SocketDataLink(DataLink):
             raise DaliException(
                 f"Header does not start with INFO, ID, PACKET, ENDSTREAM, OK or ERROR: {header}"
             )
+        except asyncio.exceptions.IncompleteReadError as e:
+            self._force_close()
+            raise DaliClosed("Connection is closed") from e
         except:
             await self.close()
             raise
@@ -115,9 +115,7 @@ class SocketDataLink(DataLink):
             self.reader is None or self.reader.at_eof()
         if ans:
             # is socket is closed, make sure other state is updated
-            self.writer = None
-            self.reader = None
-            self.__mode = QUERY_MODE
+            self._force_close()
         return ans
 
     async def close(self):
@@ -127,6 +125,9 @@ class SocketDataLink(DataLink):
             except:
                 # oh well
                 pass
+        self._force_close()
+
+    def _force_close(self):
         self.writer = None
         self.reader = None
         self.__mode = QUERY_MODE

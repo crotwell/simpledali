@@ -9,6 +9,7 @@ from .dalipacket import (
     DaliPacket,
     DaliResponse,
     DaliException,
+    DaliClosed,
     nslcToStreamId,
     fdsnSourceIdToStreamId,
     JSON_TYPE,

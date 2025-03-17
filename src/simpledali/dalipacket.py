@@ -56,6 +56,10 @@ class DaliException(Exception):
             return f"Dali {self.daliResponse.type}: {self.daliResponse.message}"
         return self.message
 
+class DaliClosed(DaliException):
+    def __init__(self, message):
+        super().__init__(message)
+
 def nslcToStreamId(net: str, sta: str, loc: str, chan: str, packettype: str) -> str:
     return f"{net}_{sta}_{loc}_{chan}/{packettype}"
 
