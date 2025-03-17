@@ -340,6 +340,16 @@ class DataLink(ABC):
         return r
 
     async def readEarliest(self):
+        """
+        Attempt to read earliest packet in ring.
+
+        The requires an exchange of two commands, position and read,
+        and so if packets are removed from the server between the commands then
+        the packet will not be returned and an DaliException will be thrown.
+        Also, this will raise a
+        DaliException if called on an empty ring as there is no earliest
+        packet.
+        """
         # maybe one day can
         # return await self.read("EARLIEST")
         r = await self.positionEarliest()
@@ -348,12 +358,22 @@ class DataLink(ABC):
         raise DaliException(f"position did not return OK: {r}")
 
     async def readLatest(self):
+        """
+        Read latest packet in ring.
+
+        The requires an exchange of two commands, position and read,
+        and so if packets arrive at the server between the commands then
+        the packet will not be the latest. Also, this will raise a
+        DaliException if called on an empty ring as there is no latest
+        packet.
+        """
         # maybe one day can
         # return await self.read("LATEST")
         r = await self.positionLatest()
         if r.type == "OK":
+            print(f"Got OK for position latest: "+r.value)
             return await self.read(r.value)
-        return r
+        raise DaliException(f"position did not return OK: {r}")
 
     async def stream(self):
         """

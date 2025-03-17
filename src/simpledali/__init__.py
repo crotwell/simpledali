@@ -8,7 +8,7 @@ Read the docs at https://simpledali.readthedocs.io/en/latest/
 Datalink is a protocol for near-realtime transfer of seismic data, usually in
 miniseed, but has flexibility to carry any payload such as JSON. The Protocol
 is defined at
-https://iris-edu.github.io/libdali/datalink-protocol.html
+https://earthscope.github.io/libdali/datalink-protocol.html
 """
 
 from .abstractdali import (

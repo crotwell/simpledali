@@ -9,9 +9,9 @@ Read the docs at [readthedocs](https://simpledali.readthedocs.io/en/latest/)
 
 
 Datalink is a protocol for near-realtime transfer of seismic data, usually in miniseed, but has flexibility to carry any payload such as JSON. The Protocol is defined at
-https://iris-edu.github.io/libdali/datalink-protocol.html
+https://earthscope.github.io/libdali/datalink-protocol.html
 
-See [ringserver](https://github.com/iris-edu/ringserver) from IRIS
+See [ringserver](https://github.com/EarthScope/ringserver/) from IRIS
 for the most common datalink server instance. The public instance
 at [rtserve.iris.washington.edu/](http://rtserve.iris.washington.edu/) allows access to near-realtime streaming seismic data over web sockets at [ws://rtserve.iris.washington.edu/datalink](ws://rtserve.iris.washington.edu/datalink)
 
