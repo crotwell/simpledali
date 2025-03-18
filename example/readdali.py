@@ -38,7 +38,7 @@ async def stream_data(dali, max=0):
             print(f"    Unknown type")
         if max > 0 and count >= max:
             print(f"End Stream: {count}>={max}")
-            await dali.endStream()
+            await dali.close()
 
 async def main(host, port, verbose=False):
     # these all have defaults
@@ -133,10 +133,14 @@ async def main(host, port, verbose=False):
             matchPattern = f"^{networkCode}_.*"
         else:
             matchPattern = f"FDSN:{networkCode}_.*"
+        print(f"Match packets: {matchPattern}")
         await dali.match(matchPattern)
         # stream data
-        await stream_data(dali, max=5)
-        # dali will be closed automatically here by "async with"
+        try:
+            await stream_data(dali, max=5)
+            # dali will be closed automatically here by "async with"
+        except simpledali.DaliClosed as e:
+            print(f"Dali connection closed by server: {e.message}")
 
 try:
     debug = False
