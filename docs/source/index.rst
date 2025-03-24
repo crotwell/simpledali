@@ -9,12 +9,23 @@ SimpleDali
 
 Datalink in pure python.
 
+
+The latest source is at GitHub,
+`https://github.com/crotwell/simpledali <https://github.com/crotwell/simpledali>`_
+.
+
+.. code-block::
+
+  pip install simpledali
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    README <readme_link>
    apidocs/index
+   Source <https://github.com/crotwell/simpledali>
+   PyPI <https://pypi.org/project/simpledali/>
 
 
 
