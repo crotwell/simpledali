@@ -119,8 +119,12 @@ async def main(host, port, verbose=False):
         except simpledali.DaliException as err:
             print(f"Oops, first packet fell out of ring before we could grab it")
             print(F"  {err}")
-        daliPacket = await dali.readLatest()
-        print(f"Last Dali packet: {daliPacket}")
+        try:
+            daliPacket = await dali.readLatest()
+            print(f"Last Dali packet: {daliPacket}")
+        except simpledali.DaliException as err:
+            print(f"Oops, no last packet, maybe an empty ring?")
+            print(F"  {err}")
 
         # set regex match pattern, really important on high volume server
         # to avoid getting way to much data
