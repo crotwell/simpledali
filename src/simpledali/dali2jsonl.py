@@ -132,16 +132,21 @@ class Dali2Jsonl:
         codesStr = daliPacket.streamId
         # remove "type" like /JSON
         codesStr = daliPacket.streamIdChannel()
+        sid = None
         if (codesStr.startswith(FDSN_PREFIX)):
             sid = FDSNSourceId.parse(codesStr)
+        elif len(codesStr.split('_')) == 4:
+            sid = FDSNSourceId.parseNslc(codesStr, '_')
+        if sid is not None:
+            outfile = self.fileFromSidPattern(sid, start)
+            outfile.parent.mkdir(parents=True, exist_ok=True)
+            with open(outfile, "a", encoding="utf-8") as out:
+                out.write(daliPacket.data.decode("utf-8") + "\n")
+                if self.verbose:
+                    print(f"   write to {outfile}")
         else:
-            sid = FDSNSourceId.parse(f"{FDSN_PREFIX}{codesStr}")
-        outfile = self.fileFromSidPattern(sid, start)
-        outfile.parent.mkdir(parents=True, exist_ok=True)
-        with open(outfile, "a", encoding="utf-8") as out:
-            out.write(daliPacket.data.decode("utf-8") + "\n")
             if self.verbose:
-                print(f"   write to {outfile}")
+                print(f"   unable to parse stream id {codesStr}, skipping")
 
     def fileFromSidPattern(self, sid: FDSNSourceId, time):
         outfile = self.fillBaseSidPattern(sid)
