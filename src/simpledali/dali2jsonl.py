@@ -18,6 +18,7 @@ from .dalipacket import JSON_TYPE, BZ2_JSON_TYPE
 from .socketdali import SocketDataLink
 from .websocketdali import WebSocketDataLink
 from .util import hptimeToDatetime
+from . import __version__
 from simplemseed import FDSNSourceId, FDSN_PREFIX
 
 DEFAULT_HOST = "localhost"
@@ -230,7 +231,9 @@ class Dali2Jsonl:
 
 def do_parseargs():
     parser = argparse.ArgumentParser(
-        description="Archive JSON datalink packets as JSON Lines."
+        description=f"""
+        Archive JSON datalink packets as JSON Lines.
+        Version={__version__}"""
     )
     parser.add_argument(
         "-v", "--verbose", help="increase output verbosity", action="store_true"
