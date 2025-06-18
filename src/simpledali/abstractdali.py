@@ -26,14 +26,14 @@ QUERY_MODE="query"
 STREAM_MODE="stream"
 
 class DataLink(ABC):
-    def __init__(self, packet_size=-1, verbose=False):
+    def __init__(self, packet_size=-1, dlproto=DLPROTO_1_0, verbose=False):
         """init DataLink. Packet_size and dlproto can be set,
         or can be acquired from the
         server via the capabilities response within id()
         """
         self.__mode = QUERY_MODE
         self.packet_size = packet_size
-        self.dlproto = "1.0"
+        self.dlproto = dlproto
         self.verbose = verbose
         self.token = None
         self.int_types = [
