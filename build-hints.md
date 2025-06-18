@@ -24,6 +24,7 @@ python3 -m pip install --upgrade hatch
 hatch clean && hatch build
 pytest
 # update release/version in docs/source/conf.py
+cd docs/source ; pip install -r requirements.txt; cd ../..
 cd docs ; make html && open build/html/index.html ; cd ..
 git status
 hatch publish
