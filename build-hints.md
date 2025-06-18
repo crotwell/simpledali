@@ -27,7 +27,7 @@ pytest
 cd docs/source ; pip install -r requirements.txt; cd ../..
 cd docs ; make html && open build/html/index.html ; cd ..
 git status
-hatch publish
+hatch publish -u __token__ --auth <token>
 ```
 
 # maybe one day conda package:
