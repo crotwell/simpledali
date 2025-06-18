@@ -25,6 +25,8 @@ async def init_dali(
 ):
     dali = simpledali.SocketDataLink(host, port, verbose=verbose)
     # dali = simpledali.WebSocketDataLink(uri, verbose=True)
+    # very good idea to call id at start, both for logging on server
+    # side and to get capabilities like packet size, dlproto or write ability
     serverId = await dali.id(programname, username, processid, architecture)
     print(f"Resp: {serverId}")
     return dali

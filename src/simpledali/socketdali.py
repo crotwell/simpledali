@@ -1,6 +1,6 @@
 import asyncio
 
-from .abstractdali import DataLink, QUERY_MODE
+from .abstractdali import DataLink, QUERY_MODE, DLPROTO_1_0
 from .dalipacket import DaliPacket, DaliResponse, DaliException, DaliClosed
 
 class SocketDataLink(DataLink):
@@ -11,8 +11,8 @@ class SocketDataLink(DataLink):
     DataLinkPort, but can also be specified as a ListenPort as long as it
     includes all or DataLink as the type.
     """
-    def __init__(self, host, port, packet_size=-1, verbose=False):
-        super().__init__(packet_size=packet_size, verbose=verbose)
+    def __init__(self, host, port, packet_size=-1, dlproto=DLPROTO_1_0, verbose=False):
+        super().__init__(packet_size=packet_size, dlproto=dlproto, verbose=verbose)
         self.host = host
         self.port = port
         self.reader = None

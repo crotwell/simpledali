@@ -55,7 +55,7 @@ async def main(host, port, verbose=False):
         # this is not required, connection will be created on first use
         await dali.createDaliConnection()
         # very good idea to call id at start, both for logging on server
-        # side and to get capabilities like packet size or write ability
+        # side and to get capabilities like packet size, dlproto or write ability
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Id: {serverId}")
         # can get status, stream, connections parsed into a dict

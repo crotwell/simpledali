@@ -34,7 +34,7 @@ async def send_test_json(dali):
         "when": starttime.isoformat(),
     }
     sendResult = await dali.writeJSON(streamid, hpdatastart, hpdataend, jsonMessage)
-    print(f"writeJSON resp {sendResult}")
+    print(f"writeJSON {streamid} response: {sendResult}")
 
 
 async def main():
@@ -46,6 +46,8 @@ async def main():
     architecture = "python"
     async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
     # async with simpledali.WebSocketDataLink(uri, verbose=verbose) as dali:
+        # very good idea to call id at start, both for logging on server
+        # side and to get capabilities like packet size, dlproto or write ability
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Id: {serverId}")
         for i in range(numSend):

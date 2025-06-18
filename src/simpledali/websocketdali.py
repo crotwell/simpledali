@@ -1,7 +1,7 @@
 
 import websockets
 
-from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE
+from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE, DLPROTO_1_0
 from .dalipacket import DaliPacket, DaliResponse, DaliException, DaliClosed
 
 class WebSocketDataLink(DataLink):
@@ -13,8 +13,8 @@ class WebSocketDataLink(DataLink):
     This uses a port number often specified in ringservers's conf as a
     ListenPort as long as it includes all or HTTP as the type.
     """
-    def __init__(self, uri, packet_size=-1, verbose=False, ping_interval=None):
-        super().__init__(packet_size=packet_size, verbose=verbose)
+    def __init__(self, uri, packet_size=-1, dlproto=DLPROTO_1_0, verbose=False, ping_interval=None):
+        super().__init__(packet_size=packet_size, dlproto=dlproto, verbose=verbose)
         self.uri = uri
         self.ws = None
         self.ping_interval = ping_interval

@@ -19,6 +19,14 @@ For parsing for miniseed2 and
 [miniseed3](http://docs.fdsn.org/projects/miniseed3/en/latest/index.html#)
 see [simplemseed](https://github.com/crotwell/simplemseed), also in pure python.
 
+Note starting with ringserver version 4, the stream ids have changed from
+the older NSLC, network_station_location_channel to the newer FDSN style
+source ids. See the FDSN documentation
+[here](https://docs.fdsn.org/projects/source-identifiers/en/latest/).
+The protocol, dlproto, configures which of these are used. It can be set in
+the constructor, but it is preferrable to call `id()` immediately, before any
+other calls, so that the server's protocol is used.
+
 Support for both regular sockets and websockets. For example:
 
 ```
@@ -38,6 +46,8 @@ async def main():
 
     # for regular socket (DataLinkPort)
     async with simpledali.SocketDataLink(host, port, verbose=verbose) as dali:
+        # very good idea to call id at start, both for logging on server
+        # side and to get capabilities like packet size, dlproto or write ability
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Connect to {host}:{port} via regular socket")
         print(f"Socket Id: {serverId.message}")
