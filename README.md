@@ -2,6 +2,9 @@
 
 [![PyPI](https://img.shields.io/pypi/v/simpledali)](https://pypi.org/project/simpledali/)
 [![Documentation Status](https://readthedocs.org/projects/simpledali/badge/?version=latest)](https://simpledali.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15691939.svg)](https://doi.org/10.5281/zenodo.15691939)
+
+
 
 Datalink in pure python.
 
