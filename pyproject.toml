@@ -17,9 +17,9 @@ classifiers = [
     "License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)",
     "Operating System :: OS Independent"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "simplemseed >= 0.4.5",
+    "simplemseed >= 0.5.0",
     "defusedxml",
     "pyjwt",
     "websockets",
@@ -43,3 +43,8 @@ addopts = [
 
 [tool.hatch.version]
 path = "src/simpledali/__init__.py"
+
+[tool.hatch.envs.test]
+  dependencies = [
+    "pytest"
+  ]
