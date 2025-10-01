@@ -21,14 +21,14 @@ match='.*/(BZ)?JSON'
 # %Y - year
 # %j - day of year
 # %H - hour
-write='jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.%H.jsonl'
+write='jsonl/%n/%s/%Y/%j/%n_%s_%l_%c_%Y_%j_%H.jsonl'
 
 [jsonl.bandwrite]
 # may also have separate pattern based on band code,
 # for example band W is
 # Band: W - Ultra-ultra Long Period, >= 0.001 to < 0.01 Hz
 # and so use a daily pattern instead of hourly
-W='jsonl/%n/%s/%Y/%j/%n.%s.%l.%c.%Y.%j.jsonl'
+W='jsonl/%n/%s/%Y/%j/%n_%s_%l_%c_%Y_%j.jsonl'
 # also reuse the same pattern for U and V
 V='W'
 U='W'
