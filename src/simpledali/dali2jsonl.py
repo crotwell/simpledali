@@ -33,12 +33,15 @@ class Dali2Jsonl:
     """
 
     def __init__(
-        self, match, writePattern, host=DEFAULT_HOST, port=DEFAULT_PORT, websocketurl=None, verbose=False
+        self, match, writePattern, bandPatterns=dict(), host=DEFAULT_HOST, port=DEFAULT_PORT, websocketurl=None, verbose=False
     ):
         self.checkPattern(writePattern)
+        for key, pat in bandPatterns.items():
+            self.checkPattern(pat)
         self.do_earliest = False
         self.match = match
         self.writePattern = writePattern
+        self.bandPatterns = bandPatterns
         self.websocketurl = websocketurl
 
         if host is not None:
@@ -59,6 +62,9 @@ class Dali2Jsonl:
             print(f"Connect to {self.host}:{self.port},")
             print(f"match {self.match}")
             print(f" write to {self.writePattern}")
+            for k, v in self.bandPatterns.items():
+                print(f"band {k} write to {v}")
+
 
     @classmethod
     def from_config(cls, conf, verbose=False):
@@ -66,9 +72,26 @@ class Dali2Jsonl:
         Configured Dali2Jsonl using dict, eg from .toml config file.
         """
         cls.configure_defaults(conf)
+        bandwrite=dict()
+        for band, pat in conf["jsonl"]["bandwrite"].items():
+            if len(band) > 1:
+                raise ValueError(
+                    f"band {band} not allowed for write pattern {pat}"
+                )
+            if len(pat) == 1:
+                # assume reuse previously define band
+                if pat in bandwrite:
+                    bandwrite[band] = conf["jsonl"]["bandwrite"][pat]
+                else:
+                    raise ValueError(
+                        f"band {band} references {pat} not previously defined"
+                    )
+            else:
+                bandwrite[band] = pat
         return cls(
             conf["datalink"]["match"],
             conf["jsonl"]["write"],
+            bandPatterns=bandwrite,
             host=conf["datalink"]["host"],
             port=conf["datalink"]["port"],
             websocketurl=conf["datalink"]["websocket"],
@@ -155,8 +178,11 @@ class Dali2Jsonl:
         return pathlib.Path(outfile)
 
     def fillBaseSidPattern(self, sid: FDSNSourceId):
+        pattern = self.writePattern
+        if sid.bandCode in self.bandPatterns:
+            pattern = self.bandPatterns[sid.bandCode]
         return (
-            self.writePattern.replace("%n", sid.networkCode)
+            pattern.replace("%n", sid.networkCode)
             .replace("%s", sid.stationCode)
             .replace("%l", sid.locationCode)
             .replace("%c", sid.shortChannelCode())
