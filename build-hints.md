@@ -1,12 +1,13 @@
 
 # build/release
 ```
-conda create -n simpledali python=3.9
+conda create -n simpledali python=3.10 -y
 conda activate simpledali
-python3 -m pip install --upgrade hatch
-pytest
+python3 -m pip install --upgrade hatch pytest
+
 hatch clean
 hatch build
+hatch test
 pip3 install dist/simpledali-*-py3-none-any.whl --force-reinstall
 pytest
 ```
