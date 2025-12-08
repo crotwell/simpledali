@@ -1,4 +1,4 @@
-
+import logging
 import websockets
 
 from .abstractdali import DataLink, QUERY_MODE, STREAM_MODE, DLPROTO_1_0
