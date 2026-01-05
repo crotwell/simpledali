@@ -109,7 +109,8 @@ async def main():
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Resp: {serverId}")
 
-        #await send_steim_mseed(dali, "Z", 2)
+        #await send_steim_mseed(dali, "Z", simplemseed.seedcodec.STEIM1)
+        #await send_steim_mseed(dali, "Z", simplemseed.seedcodec.STEIM2)
         await send_several(dali, numSend, simplemseed.seedcodec.STEIM2)
 
 
