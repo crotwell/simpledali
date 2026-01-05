@@ -67,13 +67,13 @@ async def send_steim_mseed(dali, component, encoding, pktid=None):
             simplemseed.seedcodec.STEIM1,
             simplemseed.encodeSteim1(data, frames=7), # 7 frames => 512 byte record
             numsamples,
-            True)
+            False)
     elif encoding == simplemseed.seedcodec.STEIM2:
         encData = simplemseed.EncodedDataSegment(
             simplemseed.seedcodec.STEIM2,
             simplemseed.encodeSteim2(data, frames=7), # 7 frames => 512 byte record
             numsamples,
-            True)
+            False)
     else:
         # primitive type, guess based on numpy array dtype
         encData = simplemseed.encode(data)
