@@ -76,6 +76,7 @@ async def send_steim_mseed(dali, component, encoding, pktid=None):
             False)
     else:
         # primitive type, guess based on numpy array dtype
+        # careful that size is smaller than available in record, default is 512
         encData = simplemseed.encode(data)
     print(f"enc data: {len(encData.dataBytes)}")
     msh = simplemseed.MiniseedHeader(
@@ -109,7 +110,7 @@ async def main():
         serverId = await dali.id(programname, username, processid, architecture)
         print(f"Resp: {serverId}")
 
-        #await send_steim_mseed(dali, "Z", simplemseed.seedcodec.STEIM1)
+        #await send_steim_mseed(dali, "Z", simplemseed.seedcodec.INTEGER)
         #await send_steim_mseed(dali, "Z", simplemseed.seedcodec.STEIM2)
         await send_several(dali, numSend, simplemseed.seedcodec.STEIM2)
 
